@@ -1,0 +1,95 @@
+---
+title: "Trampolining in R"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Trampolining in R}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+compiler::enableJIT(0)
+```
+
+# What is Trampolining
+
+This package and this vignette are heavily inspired by the `trampoline` package in Python (https://gitlab.com/ferreum/trampoline). In fact, this package is more or less a straight port of that package to R, and this vignette uses all the same examples from the Python `trampoline` readme, so I thought I would acknowledge that first. For more interesting discussion on trampolining, what it is, what it is good for, etc. please read this [post](https://tailrecursion.com/wondr/posts/tail-recursion-in-r.html) by Alan Dipert for discussion specific to R, and this more general [post](https://eli.thegreenplace.net/2017/on-recursion-continuations-and-trampolines/) by Eli Bendersky that also goes into a number of related programming concepts and is a really interesting read (though it is focused on Python and Clojure).
+
+In brief, trampolining is a method of doing recursive programming that let's you theoretically recurse infinitely. Why can't you do this normally? Well, languages that allow recursive programming, that is, functions that can call themselves, such as R, usually have what is called a 'call stack'. A call stack keeps tracks of which calls must be resolved before other calls can be executed. In a deeply recursive function, this call stack gets very large, and most programming languages have a limit to how large it can get, including R. We can demonstrate this by creating a very simple recursive function and then running it very deeply. 
+
+```{r simple_recurse}
+print_numbers <- function(n) {
+  if(n >= 1) {
+    print_numbers(n - 1)
+    print(n)
+  }
+}
+```
+
+This trivial function prints numbers from 1 to `n` by calling itself to print the previous number. The numbers are printed in correct order because the function recurses all the way until `n` is less than one before continuing, then each recursive call returns to the previous call in reverse order. Let's try it.
+
+```{r recurse1}
+print_numbers(5)
+```
+
+Now, if we increase `n` to a very large number, we can easily 'blow up' the call stack.
+
+```{r blow_up, error=TRUE}
+print_numbers(10000)
+```
+
+Trampolining is a way to get around this limit by avoiding using the call stack. The `trampoline` package implements a simple general trick that theoretically works on any recursive algorithm, which takes advantage of 'generator' functions. Now, this didn't use to be possible in R, because R does not have a native 'generator' concept. However, R now does have 'generators', thanks to the `{coro}` package. You don't actually need to knoq anything about 'generators' to use `trampoline`, however, if you are curious and would like to know more, the [documentation](https://github.com/r-lib/coro) of `{coro}` provides an excellent introduction.
+
+
+```{r setup}
+library(trampoline)
+## generator version
+
+print_numbers <- coro::generator(function(n) {
+  if(n >= 1) {
+    yield(print_numbers(n - 1))
+    print(n)
+  }
+})
+
+catch <- capture.output(trampoline(print_numbers(10000)))
+head(catch)
+tail(catch)
+```
+
+`trampoline` also works with recursive function that return a value at the end. To return a final value you just need to wrap the return value with the `tail_return()` function. This flags to `trampoline` that this should be returned from the final recursion of the function. Here is an example of a recursive function to calculate and return a factorial:
+
+```{r factorial}
+factorial <- function(n) {
+  if(n <= 1) {
+    return(1)
+  }
+  val <- factorial(n - 1)
+  return(val * n)
+}
+```
+
+Running this function will exhaust the call stack in as little as 2000 recursions:
+
+```{r do_recursion, error=TRUE}
+factorial(2000)
+```
+
+The `trampoline()` version runs fine, and shows us that the factorial of 2000 is far too large to be represented as an integer in R.
+
+```{r factorial2, error=TRUE}
+factorial <- coro::generator(function(n) {
+  if(n <= 1) {
+    return(tail_return(1))
+  }
+  val <- yield(factorial(n - 1))
+  return(tail_return(val * n))
+}
+)
+
+trampoline(factorial(2000))
+```
