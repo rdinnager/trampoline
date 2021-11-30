@@ -2,16 +2,16 @@
 % Please edit documentation in R/trampoline.R
 \name{trm_return}
 \alias{trm_return}
-\title{Title}
+\title{Flag a return value}
 \usage{
 trm_return(x)
 }
 \arguments{
-\item{x}{}
+\item{x}{A value to be returned at the end of all recursions}
 }
 \value{
-
+\code{x} with added class attribute 'trampoline_return'
 }
 \description{
-Title
+Flag a return value
 }

@@ -56,3 +56,59 @@ test_that("tail call recursion works", {
   expect_equal(t2, t3)
 
 })
+
+test_that("named arguments for trampoline work", {
+
+  expect_output(
+    trampoline(print_numbers(5),
+               print_numbers = coro::generator(function(n) {
+                 if(n >= 1) {
+                   yield(print_numbers(n - 1))
+                   print(n)
+                  }
+                })
+               ),
+    "\\[1\\] 1\\n\\[1\\] 2\\n\\[1\\] 3\\n\\[1\\] 4\\n\\[1\\] 5"
+  )
+
+  expect_true(
+    trampoline(even(10),
+               even = coro::generator(function(n) {
+                 if (n == 0) trm_return(TRUE) else yield(odd(n - 1))
+                }),
+               odd = coro::generator(function(n) {
+                 if (n == 0) trm_return(FALSE) else yield(even(n - 1))
+                }))
+  )
+
+  expect_false(
+    trampoline(even(11),
+               even = coro::generator(function(n) {
+                 if (n == 0) trm_return(TRUE) else yield(odd(n - 1))
+               }),
+               odd = coro::generator(function(n) {
+                 if (n == 0) trm_return(FALSE) else yield(even(n - 1))
+               }))
+  )
+
+  expect_true(
+    trampoline(odd(11),
+               even = coro::generator(function(n) {
+                 if (n == 0) trm_return(TRUE) else yield(odd(n - 1))
+               }),
+               odd = coro::generator(function(n) {
+                 if (n == 0) trm_return(FALSE) else yield(even(n - 1))
+               }))
+  )
+
+  expect_false(
+    trampoline(odd(10),
+               even = coro::generator(function(n) {
+                 if (n == 0) trm_return(TRUE) else yield(odd(n - 1))
+               }),
+               odd = coro::generator(function(n) {
+                 if (n == 0) trm_return(FALSE) else yield(even(n - 1))
+               }))
+  )
+
+})

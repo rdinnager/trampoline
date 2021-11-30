@@ -2,16 +2,16 @@
 % Please edit documentation in R/trampoline.R
 \name{trm_tailcall}
 \alias{trm_tailcall}
-\title{Title}
+\title{Flag a tail call}
 \usage{
 trm_tailcall(x)
 }
 \arguments{
-\item{x}{}
+\item{x}{A recursive call within generator fed to \code{\link[=trampoline]{trampoline()}}}
 }
 \value{
-
+\code{x} with added class attribute 'trampoline_tailcall'
 }
 \description{
-Title
+Flag a tail call
 }

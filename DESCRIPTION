@@ -1,10 +1,13 @@
 Package: trampoline
-Title: What the Package Does (One Line, Title Case)
+Title: Make Functions That Can Recurse Infinitely
 Version: 0.0.0.9000
 Authors@R: 
     person("Russell", "Dinnage", , "r.dinnage@gmail.com", role = c("aut", "cre", "cph"),
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
+           comment = c(ORCID = "0000-0003-0846-2819"))
+Description: Implements a trampoline algorithm for R that let's users write recursive functions
+    that get around R's stack call limitations, enabling theoretically infinite recursion. The
+    algorithm is based around generator function as implemented in the 'coro' package, and is
+    based almost completely on the 'trampoline' module from Python [https://gitlab.com/ferreum/trampoline].
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
