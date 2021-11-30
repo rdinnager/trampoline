@@ -18,7 +18,7 @@ trampoline <- function(...) {
     if(names(dots)[i] == "") {
       if(rlang::quo_is_call(dots[[i]])) {
         expr <- rlang::quo_get_expr(dots[[i]])
-        func <- rlang::env_get(nm = rlang::as_string(expr[[1]]), default = NULL, inherit = TRUE)
+        func <- rlang::env_get(nm = rlang::as_string(expr[[1]]), default = NULL, inherit = TRUE, env = rlang::caller_env())
         if(!rlang::is_function(func)) {
           stop("unnamed arguments to trampoline must be a call to a function or generator")
         }
