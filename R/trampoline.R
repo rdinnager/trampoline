@@ -4,12 +4,13 @@
 #'
 #' @return
 #' @export
-#'
+#' @importFrom compiler enableJIT
 #' @examples
 trampoline <- function(...) {
   ## need this to disable byte compilation temporarily, because without disabling
   ## R attempts to compile every generator instance and it creates massive overhead
-  local_compiler_level(0)
+  old_jit <- compiler::enableJIT(0)
+  on.exit(compiler::enableJIT(old_jit), add = TRUE)
 
   dots <- rlang::enquos(..., .check_assign = TRUE)
   funcs <- list()
@@ -54,6 +55,9 @@ trampoline <- function(...) {
     }
   }
 
+  #print(factorial1)
+  #print(ls())
+
   ## trampoline starts here:--------------------------------------
 
   stack <- fastmap::faststack()
@@ -69,27 +73,28 @@ trampoline <- function(...) {
       res <- stack$peek()(value)
     }
 
-    #print(class(res))
+    #print(res)
 
     if(!rlang::is_function(res)) {
       if(!coro::is_exhausted(res)) {
-        if(inherits(res, "trampoline_tail_return")) {
+        if(inherits(res, "trampoline_return")) {
           retval <- res
         }
       }
       invisible(stack$pop())
     } else {
+      if(inherits(res, "trampoline_tailcall")) {
+        invisible(stack$pop())
+      }
       stack$push(res)
     }
 
   }
-)
-
 
   if(is.null(retval)) {
     return(invisible(retval))
   } else {
-    retval
+    return(unclass(retval))
   }
 
 
@@ -111,9 +116,9 @@ trambopoline <- function(...) {
 #' @export
 #'
 #' @examples
-tail_call <- function(x) {
+trm_tailcall <- function(x) {
   structure(x,
-            class = "trampoline_tail_call")
+            class = "trampoline_tailcall")
 }
 
 #' Title
@@ -124,18 +129,10 @@ tail_call <- function(x) {
 #' @export
 #'
 #' @examples
-tail_return <- function(x) {
+trm_return <- function(x) {
   structure(x,
-            class = "trampoline_tail_return")
+            class = "trampoline_return")
 }
 
-#' @importFrom compiler enableJIT
-local_compiler_level <- withr::local_(
-  function(level) {
-    compiler::enableJIT(level)
-  },
-  function(old_level) {
-    compiler::enableJIT(old_level)
-  }
-)
+
 

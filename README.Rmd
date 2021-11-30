@@ -1,20 +1,38 @@
 ---
-title: "Trampolining in R"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{Trampolining in R}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+output: github_document
 ---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
 )
-
 ```
 
+# trampoline
+
+<!-- badges: start -->
+
+[![R-CMD-check](https://github.com/rdinnager/trampoline/workflows/R-CMD-check/badge.svg)](https://github.com/rdinnager/trampoline/actions)
+
+
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+<!-- badges: end -->
+
+The goal of trampoline is to ...
+
+## Installation
+
+You can install the development version from [GitHub](https://github.com/) with:
+
+``` r
+# install.packages("devtools")
+devtools::install_github("rdinnager/trampoline")
+```
 
 This package and this vignette are heavily inspired by the `trampoline` package in Python (https://gitlab.com/ferreum/trampoline). In fact, this package is more or less a straight port of that package to R, and this vignette uses all the same examples from the Python `trampoline` readme, so I thought I would acknowledge that first. For more interesting discussion on trampolining, what it is, what it is good for, etc. please read this [post](https://tailrecursion.com/wondr/posts/tail-recursion-in-r.html) by Alan Dipert for discussion specific to R, and this more general [post](https://eli.thegreenplace.net/2017/on-recursion-continuations-and-trampolines/) by Eli Bendersky that also goes into a number of related programming concepts and is a really interesting read (though it is focused on Python and Clojure).
 

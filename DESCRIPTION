@@ -14,9 +14,11 @@ RoxygenNote: 7.1.2
 Imports: 
     coro,
     fastmap,
-    rlang,
-    withr
+    rlang
 Suggests: 
     rmarkdown,
-    knitr
+    knitr,
+    bench,
+    testthat (>= 3.0.0)
 VignetteBuilder: knitr
+Config/testthat/edition: 3
