@@ -23,12 +23,14 @@ trampoline <- function(...) {
           stop("unnamed arguments to trampoline must be a call to a function or generator")
         }
         if(!inherits(func, "coro_generator")) {
-          cl <- rlang::call2(
+          func <- coro::generator(rlang::call2(
             "function",
             rlang::fn_fmls(func),
             rlang::fn_body(func)
-          )
-          func <- coro::generator()
+          ))
+        }
+        if(!inherits(func, "coro_generator")) {
+          stop("recursive function must be a generator")
         }
         rlang::env_poke(nm = rlang::as_string(expr[[1]]),
                         value = func)
@@ -46,6 +48,9 @@ trampoline <- function(...) {
           rlang::fn_fmls(func),
           rlang::fn_body(func)
         ))
+      }
+      if(!inherits(func, "coro_generator")) {
+        stop("recursive function must be a generator")
       }
       rlang::env_poke(nm = names(dots)[i],
                       value = func)
