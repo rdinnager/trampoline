@@ -2,6 +2,7 @@ pandoc: 2.7.3
 pkgdown: 1.6.1
 pkgdown_sha: ~
 articles:
+  articles/tree_traversal: tree_traversal.html
   tampolining: tampolining.html
-last_built: 2021-11-30T23:21Z
+last_built: 2021-12-01T01:31Z
 

@@ -12,7 +12,7 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 <!-- badges: end -->
 
 The goal of `trampoline` is to help make deeply recursive functions that
-avoid overflowing th call stack.
+avoid overflowing the call stack.
 
 ## Installation
 

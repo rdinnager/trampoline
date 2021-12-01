@@ -97,8 +97,6 @@ trampoline <- function(call, ...) {
       res <- stack$peek()(value)
     }
 
-    #print(res)
-
     if(!rlang::is_function(res)) {
       if(!coro::is_exhausted(res)) {
         if(inherits(res, "trampoline_return")) {

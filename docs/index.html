@@ -57,6 +57,9 @@
   </a>
   <ul class="dropdown-menu" role="menu">
 <li>
+      <a href="articles/articles/tree_traversal.html">Traversing Trees with Trampolines</a>
+    </li>
+    <li>
       <a href="articles/tampolining.html">Trampolining in R</a>
     </li>
   </ul>
@@ -84,7 +87,7 @@
 <!-- badges: start -->
 
 <p><a href="https://lifecycle.r-lib.org/articles/stages.html#experimental"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a> <!-- badges: end --></p>
-<p>The goal of trampoline is to …</p>
+<p>The goal of <code>trampoline</code> is to help make deeply recursive functions that avoid overflowing the call stack.</p>
 <div id="installation" class="section level2">
 <h2 class="hasAnchor">
 <a href="#installation" class="anchor"></a>Installation</h2>
@@ -132,7 +135,12 @@
 
 <span class="va">catch</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/utils/capture.output.html">capture.output</a></span><span class="op">(</span><span class="fu"><a href="reference/trampoline.html">trampoline</a></span><span class="op">(</span><span class="fu">print_numbers</span><span class="op">(</span><span class="fl">10000</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="co">## capture output to prevent flooding document with numbers</span>
 <span class="fu"><a href="https://rdrr.io/r/utils/head.html">head</a></span><span class="op">(</span><span class="va">catch</span><span class="op">)</span>
-<span class="co">#&gt; [1] "[1] 1" "[1] 2" "[1] 3" "[1] 4" "[1] 5" "[1] 6"</span>
+<span class="co">#&gt; [1] "[1] \"call\"    \"dots\"    \"i\"       \"old_jit\""</span>
+<span class="co">#&gt; [2] "[1] 1"                                              </span>
+<span class="co">#&gt; [3] "[1] 2"                                              </span>
+<span class="co">#&gt; [4] "[1] 3"                                              </span>
+<span class="co">#&gt; [5] "[1] 4"                                              </span>
+<span class="co">#&gt; [6] "[1] 5"</span>
 <span class="fu"><a href="https://rdrr.io/r/utils/head.html">tail</a></span><span class="op">(</span><span class="va">catch</span><span class="op">)</span>
 <span class="co">#&gt; [1] "[1] 9995"  "[1] 9996"  "[1] 9997"  "[1] 9998"  "[1] 9999"  "[1] 10000"</span></code></pre></div>
 <p><code>trampoline</code> also works with recursive function that return a value at the end. To return a final value you just need to wrap the return value with the <code><a href="reference/trm_return.html">trm_return()</a></code> function. This flags to <code>trampoline</code> that this should be returned from the final recursion of the function. Here is an example of a recursive function to calculate and return a factorial:</p>
@@ -160,6 +168,7 @@
 <span class="op">)</span>
 
 <span class="fu"><a href="reference/trampoline.html">trampoline</a></span><span class="op">(</span><span class="fu">factorial1</span><span class="op">(</span><span class="fl">5000</span><span class="op">)</span><span class="op">)</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
 <span class="co">#&gt; [1] Inf</span></code></pre></div>
 <p>With the standard <code>trampoline</code> approach, generator functions spawn generator functions, and each generator is stored in a list internally. All must exist simultaneously, which means that memory can be exhausted in very deep recursions (but typically we have much more RAM available than what is provided in the call stack – in case you are wondering why the call stack is so limited, <a href="https://softwareengineering.stackexchange.com/questions/330626/why-does-the-call-stack-have-a-static-maximum-size">here</a> is one stackexchange question related to that). This approach is very flexible and allows pretty much arbitrary recursive functions where all we have to do is wrap our recursive call in <code>yield()</code>, which makes our function a generator. However, in some cases our recursive functions can be rewritten in a form that allows for a more memory efficient approach. These are know as tail call recursions – their important characteristic is that the recursive call comes as the very last operation in the function. If so, this makes the function a type of simple continuation which can be easily transformed into a standard loop under the hood. <code>trampoline</code> supports tail call recursion by providing a function <code><a href="reference/trm_tailcall.html">trm_tailcall()</a></code> that you can wrap your recursive call in, and which let’s <code>trampoline</code> know that it can take advantage of this more efficient form (additionally for tail call recursions we do not need to call <code>yield()</code> though it will not hurt to do so). For example, the above <code>factorial</code> recursion function is not a tail call recursion because the last operation is the multiplication by <code>n</code>, rather than the recursive call. However, this function can be transformed into a tail call recursion with the help of an additional argument:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
@@ -173,6 +182,7 @@
 <span class="op">}</span><span class="op">)</span>
 
 <span class="fu"><a href="reference/trampoline.html">trampoline</a></span><span class="op">(</span><span class="fu">factorial2</span><span class="op">(</span><span class="fl">5000</span><span class="op">)</span><span class="op">)</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
 <span class="co">#&gt; [1] Inf</span></code></pre></div>
 <p>Note the use of <code><a href="https://rdrr.io/r/base/force.html">force(x)</a></code>. This is required to work around R’s default lazy evaluation, which means an argument is not evaluated until it is used. <code><a href="https://rdrr.io/r/base/force.html">force(x)</a></code> makes sure <code>x</code> is evaluated before it is passed to the next recursion. Without this, it would not be evaluated until the very end of the recursion sequence when it is returned. This has the side effect of requiring R to maintain a call stack to keep track of the environment where <code>x</code> was created, and this causes a stack overflow. If you get an error saying the call stack is exhausted when using <code><a href="reference/trampoline.html">trampoline()</a></code>, lazy evaluation is usually the culprit. Experimenting with forcing different arguments will generally resolve it. To be safe you can simply force all arguments if you wish (note you do not have to use <code><a href="https://rdrr.io/r/base/force.html">force()</a></code>, you only have to use the argument somehow before it is passed to the next function – just putting <code>n; x</code> as the first line of the above function would work, though it is less clear what the purpose is, which is why <code><a href="https://rdrr.io/r/base/force.html">force()</a></code> exists).</p>
 <p>Just to show that these all return the same result, we can run them with smaller <code>n</code> where the regular recursive version will work.</p>
@@ -181,8 +191,10 @@
 <span class="fu"><a href="https://rdrr.io/r/base/Special.html">factorial</a></span><span class="op">(</span><span class="fl">10</span><span class="op">)</span>
 <span class="co">#&gt; [1] 3628800</span>
 <span class="fu"><a href="reference/trampoline.html">trampoline</a></span><span class="op">(</span><span class="fu">factorial1</span><span class="op">(</span><span class="fl">10</span><span class="op">)</span><span class="op">)</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
 <span class="co">#&gt; [1] 3628800</span>
 <span class="fu"><a href="reference/trampoline.html">trampoline</a></span><span class="op">(</span><span class="fu">factorial2</span><span class="op">(</span><span class="fl">10</span><span class="op">)</span><span class="op">)</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
 <span class="co">#&gt; [1] 3628800</span></code></pre></div>
 <p>The second version using the tail call should use much less memory than the no tail call version. We can see that using the <code><a href="https://rdrr.io/pkg/bench/man/mark.html">bench::mark()</a></code> function.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
@@ -195,6 +207,38 @@
                          <span class="fu"><a href="reference/trampoline.html">trampoline</a></span><span class="op">(</span><span class="fu">factorial1</span><span class="op">(</span><span class="fl">10000</span><span class="op">)</span><span class="op">)</span>, 
                          <span class="fu"><a href="reference/trampoline.html">trampoline</a></span><span class="op">(</span><span class="fu">factorial2</span><span class="op">(</span><span class="fl">10000</span><span class="op">)</span><span class="op">)</span>,
                          check <span class="op">=</span> <span class="cn">FALSE</span>, iterations <span class="op">=</span> <span class="fl">3</span><span class="op">)</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
 <span class="co">#&gt; Warning: Some expressions had a GC in every iteration; so filtering is disabled.</span>
 
 <span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html">plot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/numeric.html">as.numeric</a></span><span class="op">(</span><span class="va">bench_res</span><span class="op">$</span><span class="va">mem_alloc</span><span class="op">)</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="cn">TRUE</span>, <span class="cn">FALSE</span><span class="op">)</span><span class="op">]</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="fl">1000</span>, <span class="fl">2000</span>, <span class="fl">5000</span>, <span class="fl">10000</span><span class="op">)</span>, type <span class="op">=</span> <span class="st">"l"</span>, col <span class="op">=</span> <span class="st">"red"</span>, 
@@ -221,13 +265,17 @@
 <span class="op">}</span><span class="op">)</span>
 
 <span class="fu"><a href="reference/trampoline.html">trampoline</a></span><span class="op">(</span><span class="fu">even</span><span class="op">(</span><span class="fl">10000</span><span class="op">)</span><span class="op">)</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
 <span class="co">#&gt; [1] TRUE</span>
 <span class="fu"><a href="reference/trampoline.html">trampoline</a></span><span class="op">(</span><span class="fu">even</span><span class="op">(</span><span class="fl">10001</span><span class="op">)</span><span class="op">)</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
 <span class="co">#&gt; [1] FALSE</span>
 
 <span class="fu"><a href="reference/trampoline.html">trampoline</a></span><span class="op">(</span><span class="fu">odd</span><span class="op">(</span><span class="fl">10000</span><span class="op">)</span><span class="op">)</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
 <span class="co">#&gt; [1] FALSE</span>
 <span class="fu"><a href="reference/trampoline.html">trampoline</a></span><span class="op">(</span><span class="fu">odd</span><span class="op">(</span><span class="fl">10001</span><span class="op">)</span><span class="op">)</span>
+<span class="co">#&gt; [1] "call"    "dots"    "i"       "old_jit"</span>
 <span class="co">#&gt; [1] TRUE</span></code></pre></div>
 <p>An example where <code>trampoline</code> can really shine is in branching recursive functions, such as functions that traverse trees of various kinds, where we don’t want to worry about hitting the call stack limit with large trees. One natural way of specifying these generally cannot be converted to tail call form easily because the recursive function is called multiple times within its body, and so they cannot all be in tail position. For some examples of these more complicated branching recursive functions, see the vignette “Traversing Trees with Trampoline”.</p>
 </div>
