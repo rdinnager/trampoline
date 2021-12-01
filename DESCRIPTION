@@ -16,11 +16,13 @@ RoxygenNote: 7.1.2
 Imports: 
     coro,
     fastmap,
-    rlang
+    rlang (>= 0.1.2)
 Suggests: 
     rmarkdown,
     knitr,
     bench,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    roxygen2
 VignetteBuilder: knitr
+URL: https://github.com/rdinnager/trampoline, https://rdinnager.github.io/trampoline/
 Config/testthat/edition: 3

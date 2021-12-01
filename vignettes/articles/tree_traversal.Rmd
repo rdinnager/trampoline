@@ -9,6 +9,140 @@ knitr::opts_chunk$set(
 )
 ```
 
+This article goes over a few examples of using the `trampoline` package to do recursive tree traversals (without fear of hitting the limits of R's call stack). 
+
+# Example 1: Phylogenetic Tree Clade Collapse
+
 ```{r setup}
 library(trampoline)
+library(ape)
+library(imager)
+library(purrr)
+```
+
+# Example 2: Quadtree refinement for images
+
+This example is partly based on this [post](https://dahtah.github.io/imager/quadtrees.html), which also uses `imager` to make a quad-tree. Note that R has several functions in different packages for making quad-trees already, so this is just for demonstration purposes. See for example the package [`{quadtree}`](https://cran.r-project.org/web/packages/quadtree/index.html), which makes quad-trees from spatial rasters.
+
+A quad-tree is a data structure that is often used to approximate two-dimensional grid-like data. 
+
+![An image of Charles Darwin from 1880](figures/Charles_Darwin_1880.jpg)
+
+```{r quadtree1}
+
+im <- imager::load.image("figures/Charles_Darwin_1880.jpg")
+
+quadtree <- function(img, sd_thresh = 0.05, type = c("none", "borders", "ellipses"), bg = "black") {
+  type <- match.arg(type)
+  ## calculate the sd of each colour channel and average them
+  imsd <- imsplit(img, "c") %>%
+    map_dbl(sd) %>%
+    mean()
+  ## decide whether to split into quads
+  if(imsd < sd_thresh || any(dim(img)[1:2] <= 4)) { ## no split, return image with pixels averaged
+    
+    ## use circles
+    av_img <- imsplit(img, "c") %>% 
+        map(~ 0 * .x + mean(.x)) %>% 
+        imappend("c")
+    
+    ## add borders
+    if(type == "borders") {
+      av_img <- colorise(av_img, px.borders(av_img), bg)
+    }
+  
+    if(type == "ellipses") {
+      a <- width(av_img) / 2
+      b <- height(av_img) / 2
+      ellipse <- ((Xc(av_img) - a)^2 / a^2) + ((Yc(av_img) - b)^2 / b^2) > 1
+      av_img <- colorise(av_img, ellipse, bg)
+    }
+    
+    return(av_img)
+  } else { ## split image and run quadtree on each split 
+    img_split <- imsplit(img, "x", 2) %>%
+      map(~ imsplit(.x, "y", 2)) %>%
+      flatten()
+    
+    quad1 <- quadtree(img_split[[1]], sd_thresh = sd_thresh, type = type, bg = bg)
+    quad2 <- quadtree(img_split[[2]], sd_thresh = sd_thresh, type = type, bg = bg)
+    quad3 <- quadtree(img_split[[3]], sd_thresh = sd_thresh, type = type, bg = bg)
+    quad4 <- quadtree(img_split[[4]], sd_thresh = sd_thresh, type = type, bg = bg)
+    
+    ## recombine quads and return them
+    img_new <- list(list(quad1, quad2),
+                    list(quad3, quad4)) %>%
+      map(~ imappend(.x, "y")) %>%
+      imappend("x")
+    
+    return(img_new)
+  }
+}
+
+```
+
+Now to test that out!
+
+```{r run_quadtree}
+
+quad_darwin <- quadtree(im, sd_thresh = 0.1, type = "ellipses")
+plot(quad_darwin)
+
+```
+
+```{r quadtree_trm}
+
+trm_quadtree <- function(img, sd_thresh = 0.05, type = "none", bg = "black") {
+  ## removed the match.arg() for type as this doesn't seem to work in a generator?
+  ## calculate the sd of each colour channel and average them
+  imsd <- imsplit(img, "c") %>%
+    map_dbl(sd) %>%
+    mean()
+  ## decide whether to split into quads
+  if(imsd < sd_thresh || any(dim(img)[1:2] <= 4)) { ## no split, return image with pixels averaged
+    
+    ## use circles
+    av_img <- imsplit(img, "c") %>% 
+        map(~ 0 * .x + mean(.x)) %>% 
+        imappend("c")
+    
+    ## add borders
+    if(type == "borders") {
+      av_img <- colorise(av_img, px.borders(av_img), bg)
+    }
+  
+    if(type == "ellipses") {
+      a <- width(av_img) / 2
+      b <- height(av_img) / 2
+      ellipse <- ((Xc(av_img) - a)^2 / a^2) + ((Yc(av_img) - b)^2 / b^2) > 1
+      av_img <- colorise(av_img, ellipse, bg)
+    }
+    
+    ## just add trm_return()
+    return(trm_return(av_img))
+  } else { ## split image and run quadtree on each split 
+    img_split <- imsplit(img, "x", 2) %>%
+      map(~ imsplit(.x, "y", 2)) %>%
+      flatten()
+    
+    ## just add yield()
+    quad1 <- yield(trm_quadtree(img_split[[1]], sd_thresh = sd_thresh, type = type, bg = bg))
+    quad2 <- yield(trm_quadtree(img_split[[2]], sd_thresh = sd_thresh, type = type, bg = bg))
+    quad3 <- yield(trm_quadtree(img_split[[3]], sd_thresh = sd_thresh, type = type, bg = bg))
+    quad4 <- yield(trm_quadtree(img_split[[4]], sd_thresh = sd_thresh, type = type, bg = bg))
+    
+    ## recombine quads and return them
+    img_new <- list(list(quad1, quad2),
+                    list(quad3, quad4)) %>%
+      map(~ imappend(.x, "y")) %>%
+      imappend("x")
+    
+    ## just add trm_return()
+    return(trm_return(img_new))
+  }
+}
+
+trm_quad_darwin <- trampoline(trm_quadtree(im, sd_thresh = 0.1, type = "ellipses"))
+plot(trm_quad_darwin)
+
 ```

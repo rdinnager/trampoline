@@ -75,7 +75,7 @@ default call stack limits)." />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">trampoline</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.0.9000</span>
+        <span class="version label label-danger" data-toggle="tooltip" data-placement="bottom" title="Unreleased version">0.0.0.9000</span>
       </span>
     </div>
 
@@ -110,7 +110,12 @@ default call stack limits)." />
 </li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
-        
+        <li>
+  <a href="https://github.com/rdinnager/trampoline/">
+    <span class="fab fa-github fa-lg"></span>
+     
+  </a>
+</li>
       </ul>
       
     </div><!--/.nav-collapse -->
@@ -125,7 +130,7 @@ default call stack limits)." />
   <div class="col-md-9 contents">
     <div class="page-header">
     <h1>Make a trampoline.</h1>
-    
+    <small class="dont-index">Source: <a href='https://github.com/rdinnager/trampoline/blob/master/R/trampoline.R'><code>R/trampoline.R</code></a></small>
     <div class="hidden name"><code>trambopoline.Rd</code></div>
     </div>
 
@@ -136,11 +141,17 @@ recurse theoretically forever (but usually just more than can be handled by R's
 default call stack limits).</p>
     </div>
 
-    <pre class="usage"><span class='fu'>trambopoline</span><span class='op'>(</span><span class='va'>...</span><span class='op'>)</span></pre>
+    <pre class="usage"><span class='fu'>trambopoline</span><span class='op'>(</span><span class='va'>call</span>, <span class='va'>...</span><span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
+    <tr>
+      <th>call</th>
+      <td><p>A call to a generator function. The generator function can be
+one defined already in the calling environment or higher (using <code><a href='https://rdrr.io/pkg/coro/man/generator.html'>coro::generator()</a></code>),
+or can be defined as an argument to <code><a href='trampoline.html'>trampoline()</a></code>, see <code>...</code> argument.</p></td>
+    </tr>
     <tr>
       <th>...</th>
       <td><p>A named list of generator functions. Named arguments are generator function

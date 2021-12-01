@@ -2,19 +2,25 @@
 % Please edit documentation in R/trampoline.R
 \name{trampoline}
 \alias{trampoline}
+\alias{tramampoline}
+\alias{trambopoline}
 \title{Make a trampoline.}
 \usage{
 trampoline(call, ...)
+
+tramampoline(call, ...)
+
+trambopoline(call, ...)
 }
 \arguments{
-\item{call}{A call to a generator function. The generator function can be
-one defined already in the calling environment or higher (using \code{\link[coro:generator]{coro::generator()}}),
-or can be defined as an argument to \code{trampoline()}, see \code{...} argument.}
+\item{call}{A call to a function or generator function. The function can be
+one defined already in the calling environment or higher or can be defined as an argument
+to \code{trampoline()}, see \code{...} argument.}
 
-\item{...}{A named list of generator functions. Named arguments are generator function
-definitions where the name of the argument should be the desired name of the function
-(that is referred to also within the function for recursion, see examples to get a clearer
-idea of what this means). Passing multiple named arguments is possible and
+\item{...}{A named list of functions or generator functions. Named arguments are function or
+generator function definitions where the name of the argument should be the desired name of
+the function (that is referred to also within the function for recursion, see examples to
+get a clearer idea of what this means). Passing multiple named arguments is possible and
 allows specification of functions that can be used within the generator function that is
 called in \code{call} (again, the examples might make this clearer).}
 }
@@ -29,4 +35,82 @@ This function takes a call to a generator factory, created by \code{\link[coro:g
 runs it as a trampoline, which allows any recursion in the generator function to
 recurse theoretically forever (but usually just more than can be handled by R's
 default call stack limits).
+}
+\examples{
+## standard recursive function exhausts stack:
+print_numbers <- function(n) {
+  if(n >= 1) {
+    print_numbers(n - 1)
+    print(n)
+  }
+}
+try(print_numbers(5000))
+
+## use trampoline with a coro generator instead
+print_numbers <- coro::generator(function(n) {
+  if(n >= 1) {
+    yield(print_numbers(n - 1))
+    print(n)
+  }
+})
+nums <- capture.output(
+  trampoline(print_numbers(5000))
+)
+cat(tail(nums))
+
+## Or just use a plain function (but still use yield())
+print_numbers <- function(n) {
+  if(n >= 1) {
+    yield(print_numbers(n - 1))
+    print(n)
+  }
+}
+nums <- capture.output(
+  trampoline(print_numbers(5000))
+)
+cat(tail(nums))
+
+## use an alias or another
+tramampoline(print_numbers(5000))
+trambopoline(print_numbers(5000))
+
+## use multiple mutually recursive functions
+even <- function(n) {
+  if (n == 0) trm_return(TRUE) else yield(odd(n - 1))
+}
+
+odd <- function(n) {
+  if (n == 0) trm_return(FALSE) else yield(even(n - 1))
+}
+
+## doesn't work (you must pass odd in because trampoline
+## only converts first called function to generator by default)
+try(trampoline(even(10000)))
+
+## does work
+trampoline(even(10000), odd = odd)
+
+## you can specify your recursive function in the trampoline
+## call if you want.
+## Return a value using trm_return():
+trampoline(factorial(13),
+           factorial = function(n) {
+             if(n <= 1) {
+               return(trm_return(1))
+             }
+             val <- yield(factorial(n - 1))
+             return(val * n)
+           })
+
+## convert to using tail call optimization by wrapping
+## recursive call in trm_tailcall()
+trampoline(factorial(13),
+           factorial = function(n, x = 1) {
+             force(x) ## necessary thanks to R's lazy evaluation
+             if(n <= 1) {
+               return(trm_return(x))
+             }
+             val <- trm_tailcall(factorial(n - 1, x * n))
+             return(val)
+           })
 }

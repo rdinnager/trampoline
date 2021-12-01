@@ -62,6 +62,21 @@ head(catch)
 tail(catch)
 ```
 
+Note that you don't have to call `coro::generator()` yourself. If you pass a plain function to `trampoline()` it will convert it to a generator for you. This works too:
+
+```{r plain_function}
+print_numbers <- function(n) {
+  if(n >= 1) {
+    yield(print_numbers(n - 1))
+    print(n)
+  }
+}
+
+trampoline(print_numbers(5))
+```
+
+Note also that, as seen at the beginning of the readme, you can pass your recursive functions as named arguments to `trampoline()`, which allows you to define to function within your `trampoline()` call if you wish. You will find an example of this at the end of this vignette too.
+
 `trampoline` also works with recursive function that return a value at the end. To return a final value you just need to wrap the return value with the `trm_return()` function. This flags to `trampoline` that this should be returned from the final recursion of the function. Here is an example of a recursive function to calculate and return a factorial:
 
 ```{r factorial}
@@ -83,14 +98,13 @@ factorial(5000)
 The `trampoline()` version runs fine, and shows us that the factorial of 5000 is far too large to be represented as an integer in R (resulting in `Inf`).
 
 ```{r factorial2, error=TRUE}
-factorial1 <- coro::generator(function(n) {
+factorial1 <- function(n) {
   if(n <= 1) {
     return(trm_return(1))
   }
   val <- yield(factorial1(n - 1))
   return(val * n)
 }
-)
 
 trampoline(factorial1(5000))
 ```
@@ -98,14 +112,14 @@ trampoline(factorial1(5000))
 With the standard `trampoline` approach, generator functions spawn generator functions, and each generator is stored in a list internally. All must exist simultaneously, which means that memory can be exhausted in very deep recursions (but typically we have much more RAM available than what is provided in the call stack -- in case you are wondering why the call stack is so limited, [here](https://softwareengineering.stackexchange.com/questions/330626/why-does-the-call-stack-have-a-static-maximum-size) is one stackexchange question related to that). This approach is very flexible and allows pretty much arbitrary recursive functions where all we have to do is wrap our recursive call in `yield()`, which makes our function a generator. However, in some cases our recursive functions can be rewritten in a form that allows for a more memory efficient approach. These are know as tail call recursions -- their important characteristic is that the recursive call comes as the very last operation in the function. If so, this makes the function a type of simple continuation which can be easily transformed into a standard loop under the hood. `trampoline` supports tail call recursion by providing a function `trm_tailcall()` that you can wrap your recursive call in, and which let's `trampoline` know that it can take advantage of this more efficient form (additionally for tail call recursions we do not need to call `yield()` though it will not hurt to do so). For example, the above `factorial` recursion function is not a tail call recursion because the last operation is the multiplication by `n`, rather than the recursive call. However, this function can be transformed into a tail call recursion with the help of an additional argument: 
 
 ```{r factorial3}
-factorial2 <- coro::generator(function(n, x = 1) {
+factorial2 <- function(n, x = 1) {
   force(x) ## necessary thanks to R's lazy evaluation
   if(n <= 1) {
     return(trm_return(x))
   }
   val <- trm_tailcall(factorial2(n - 1, x * n))
   return(val)
-})
+}
 
 trampoline(factorial2(5000))
 ```
@@ -168,6 +182,25 @@ trampoline(even(10001))
 
 trampoline(odd(10000))
 trampoline(odd(10001))
+
+```
+
+Note that the above only works if you specify the function directly as generators. This is because the `odd()` function won't be converted to a generator by `trampoline()` because it doesn't 'know' about it. You can get around this by passing the `odd()` function in as a named argument like this:
+
+```{r pass_named_args, error=TRUE}
+even <- function(n) {
+  if (n == 0) trm_return(TRUE) else yield(odd(n - 1))
+}
+
+odd <- function(n) {
+  if (n == 0) trm_return(FALSE) else yield(even(n - 1))
+}
+
+## doesn't work
+trampoline(even(10000))
+
+## does work
+trampoline(even(10000), odd = odd)
 
 ```
 

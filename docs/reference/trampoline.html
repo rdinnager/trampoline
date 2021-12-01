@@ -75,7 +75,7 @@ default call stack limits)." />
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">trampoline</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.0.9000</span>
+        <span class="version label label-danger" data-toggle="tooltip" data-placement="bottom" title="Unreleased version">0.0.0.9000</span>
       </span>
     </div>
 
@@ -110,7 +110,12 @@ default call stack limits)." />
 </li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
-        
+        <li>
+  <a href="https://github.com/rdinnager/trampoline/">
+    <span class="fab fa-github fa-lg"></span>
+     
+  </a>
+</li>
       </ul>
       
     </div><!--/.nav-collapse -->
@@ -125,7 +130,7 @@ default call stack limits)." />
   <div class="col-md-9 contents">
     <div class="page-header">
     <h1>Make a trampoline.</h1>
-    
+    <small class="dont-index">Source: <a href='https://github.com/rdinnager/trampoline/blob/master/R/trampoline.R'><code>R/trampoline.R</code></a></small>
     <div class="hidden name"><code>trampoline.Rd</code></div>
     </div>
 
@@ -136,23 +141,27 @@ recurse theoretically forever (but usually just more than can be handled by R's
 default call stack limits).</p>
     </div>
 
-    <pre class="usage"><span class='fu'>trampoline</span><span class='op'>(</span><span class='va'>call</span>, <span class='va'>...</span><span class='op'>)</span></pre>
+    <pre class="usage"><span class='fu'>trampoline</span><span class='op'>(</span><span class='va'>call</span>, <span class='va'>...</span><span class='op'>)</span>
+
+<span class='fu'>tramampoline</span><span class='op'>(</span><span class='va'>call</span>, <span class='va'>...</span><span class='op'>)</span>
+
+<span class='fu'>trambopoline</span><span class='op'>(</span><span class='va'>call</span>, <span class='va'>...</span><span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
       <th>call</th>
-      <td><p>A call to a generator function. The generator function can be
-one defined already in the calling environment or higher (using <code><a href='https://rdrr.io/pkg/coro/man/generator.html'>coro::generator()</a></code>),
-or can be defined as an argument to <code>trampoline()</code>, see <code>...</code> argument.</p></td>
+      <td><p>A call to a function or generator function. The function can be
+one defined already in the calling environment or higher or can be defined as an argument
+to <code>trampoline()</code>, see <code>...</code> argument.</p></td>
     </tr>
     <tr>
       <th>...</th>
-      <td><p>A named list of generator functions. Named arguments are generator function
-definitions where the name of the argument should be the desired name of the function
-(that is referred to also within the function for recursion, see examples to get a clearer
-idea of what this means). Passing multiple named arguments is possible and
+      <td><p>A named list of functions or generator functions. Named arguments are function or
+generator function definitions where the name of the argument should be the desired name of
+the function (that is referred to also within the function for recursion, see examples to
+get a clearer idea of what this means). Passing multiple named arguments is possible and
 allows specification of functions that can be used within the generator function that is
 called in <code>call</code> (again, the examples might make this clearer).</p></td>
     </tr>
@@ -165,6 +174,84 @@ function, <code>trampoline()</code> will return the final return value from the 
 Otherwise it will return <code>NULL</code> invisibly (in case the recursion is only for its
 side-effects). See the examples for how this works.</p>
 
+    <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
+    <pre class="examples"><div class='input'><span class='co'>## standard recursive function exhausts stack:</span>
+<span class='va'>print_numbers</span> <span class='op'>&lt;-</span> <span class='kw'>function</span><span class='op'>(</span><span class='va'>n</span><span class='op'>)</span> <span class='op'>{</span>
+  <span class='kw'>if</span><span class='op'>(</span><span class='va'>n</span> <span class='op'>&gt;=</span> <span class='fl'>1</span><span class='op'>)</span> <span class='op'>{</span>
+    <span class='fu'>print_numbers</span><span class='op'>(</span><span class='va'>n</span> <span class='op'>-</span> <span class='fl'>1</span><span class='op'>)</span>
+    <span class='fu'><a href='https://rdrr.io/r/base/print.html'>print</a></span><span class='op'>(</span><span class='va'>n</span><span class='op'>)</span>
+  <span class='op'>}</span>
+<span class='op'>}</span>
+<span class='kw'><a href='https://rdrr.io/r/base/try.html'>try</a></span><span class='op'>(</span><span class='fu'>print_numbers</span><span class='op'>(</span><span class='fl'>5000</span><span class='op'>)</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; Error : evaluation nested too deeply: infinite recursion / options(expressions=)?</div><div class='input'>
+<span class='co'>## use trampoline with a coro generator instead</span>
+<span class='va'>print_numbers</span> <span class='op'>&lt;-</span> <span class='fu'>coro</span><span class='fu'>::</span><span class='fu'><a href='https://rdrr.io/pkg/coro/man/generator.html'>generator</a></span><span class='op'>(</span><span class='kw'>function</span><span class='op'>(</span><span class='va'>n</span><span class='op'>)</span> <span class='op'>{</span>
+  <span class='kw'>if</span><span class='op'>(</span><span class='va'>n</span> <span class='op'>&gt;=</span> <span class='fl'>1</span><span class='op'>)</span> <span class='op'>{</span>
+    <span class='fu'>yield</span><span class='op'>(</span><span class='fu'>print_numbers</span><span class='op'>(</span><span class='va'>n</span> <span class='op'>-</span> <span class='fl'>1</span><span class='op'>)</span><span class='op'>)</span>
+    <span class='fu'><a href='https://rdrr.io/r/base/print.html'>print</a></span><span class='op'>(</span><span class='va'>n</span><span class='op'>)</span>
+  <span class='op'>}</span>
+<span class='op'>}</span><span class='op'>)</span>
+<span class='va'>nums</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/utils/capture.output.html'>capture.output</a></span><span class='op'>(</span>
+  <span class='fu'>trampoline</span><span class='op'>(</span><span class='fu'>print_numbers</span><span class='op'>(</span><span class='fl'>5000</span><span class='op'>)</span><span class='op'>)</span>
+<span class='op'>)</span>
+<span class='fu'><a href='https://rdrr.io/r/base/cat.html'>cat</a></span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/utils/head.html'>tail</a></span><span class='op'>(</span><span class='va'>nums</span><span class='op'>)</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; [1] 4995 [1] 4996 [1] 4997 [1] 4998 [1] 4999 [1] 5000</div><div class='input'>
+<span class='co'>## Or just use a plain function (but still use yield())</span>
+<span class='va'>print_numbers</span> <span class='op'>&lt;-</span> <span class='kw'>function</span><span class='op'>(</span><span class='va'>n</span><span class='op'>)</span> <span class='op'>{</span>
+  <span class='kw'>if</span><span class='op'>(</span><span class='va'>n</span> <span class='op'>&gt;=</span> <span class='fl'>1</span><span class='op'>)</span> <span class='op'>{</span>
+    <span class='fu'>yield</span><span class='op'>(</span><span class='fu'>print_numbers</span><span class='op'>(</span><span class='va'>n</span> <span class='op'>-</span> <span class='fl'>1</span><span class='op'>)</span><span class='op'>)</span>
+    <span class='fu'><a href='https://rdrr.io/r/base/print.html'>print</a></span><span class='op'>(</span><span class='va'>n</span><span class='op'>)</span>
+  <span class='op'>}</span>
+<span class='op'>}</span>
+<span class='va'>nums</span> <span class='op'>&lt;-</span> <span class='fu'><a href='https://rdrr.io/r/utils/capture.output.html'>capture.output</a></span><span class='op'>(</span>
+  <span class='fu'>trampoline</span><span class='op'>(</span><span class='fu'>print_numbers</span><span class='op'>(</span><span class='fl'>5000</span><span class='op'>)</span><span class='op'>)</span>
+<span class='op'>)</span>
+<span class='fu'><a href='https://rdrr.io/r/base/cat.html'>cat</a></span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/utils/head.html'>tail</a></span><span class='op'>(</span><span class='va'>nums</span><span class='op'>)</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; [1] 4995 [1] 4996 [1] 4997 [1] 4998 [1] 4999 [1] 5000</div><div class='input'>
+<span class='co'>## use an alias or another</span>
+<span class='fu'>tramampoline</span><span class='op'>(</span><span class='fu'>print_numbers</span><span class='op'>(</span><span class='fl'>5000</span><span class='op'>)</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; <span class='error'>Error in trampoline(call = {    {        call    }}, ...): call must be a call to a function or generator</span></div><div class='input'><span class='fu'>trambopoline</span><span class='op'>(</span><span class='fu'>print_numbers</span><span class='op'>(</span><span class='fl'>5000</span><span class='op'>)</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; <span class='error'>Error in trampoline(call = {    {        call    }}, ...): call must be a call to a function or generator</span></div><div class='input'>
+<span class='co'>## use multiple mutually recursive functions</span>
+<span class='va'>even</span> <span class='op'>&lt;-</span> <span class='kw'>function</span><span class='op'>(</span><span class='va'>n</span><span class='op'>)</span> <span class='op'>{</span>
+  <span class='kw'>if</span> <span class='op'>(</span><span class='va'>n</span> <span class='op'>==</span> <span class='fl'>0</span><span class='op'>)</span> <span class='fu'><a href='trm_return.html'>trm_return</a></span><span class='op'>(</span><span class='cn'>TRUE</span><span class='op'>)</span> <span class='kw'>else</span> <span class='fu'>yield</span><span class='op'>(</span><span class='fu'>odd</span><span class='op'>(</span><span class='va'>n</span> <span class='op'>-</span> <span class='fl'>1</span><span class='op'>)</span><span class='op'>)</span>
+<span class='op'>}</span>
+
+<span class='va'>odd</span> <span class='op'>&lt;-</span> <span class='kw'>function</span><span class='op'>(</span><span class='va'>n</span><span class='op'>)</span> <span class='op'>{</span>
+  <span class='kw'>if</span> <span class='op'>(</span><span class='va'>n</span> <span class='op'>==</span> <span class='fl'>0</span><span class='op'>)</span> <span class='fu'><a href='trm_return.html'>trm_return</a></span><span class='op'>(</span><span class='cn'>FALSE</span><span class='op'>)</span> <span class='kw'>else</span> <span class='fu'>yield</span><span class='op'>(</span><span class='fu'>even</span><span class='op'>(</span><span class='va'>n</span> <span class='op'>-</span> <span class='fl'>1</span><span class='op'>)</span><span class='op'>)</span>
+<span class='op'>}</span>
+
+<span class='co'>## doesn't work (you must pass odd in because trampoline</span>
+<span class='co'>## only converts first called function to generator by default)</span>
+<span class='kw'><a href='https://rdrr.io/r/base/try.html'>try</a></span><span class='op'>(</span><span class='fu'>trampoline</span><span class='op'>(</span><span class='fu'>even</span><span class='op'>(</span><span class='fl'>10000</span><span class='op'>)</span><span class='op'>)</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; Error in odd(n - 1) : could not find function "odd"</div><div class='input'>
+<span class='co'>## does work</span>
+<span class='fu'>trampoline</span><span class='op'>(</span><span class='fu'>even</span><span class='op'>(</span><span class='fl'>10000</span><span class='op'>)</span>, odd <span class='op'>=</span> <span class='va'>odd</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; <span class='error'>Error in rlang::eval_bare(rlang::quo_get_expr(dots[[i]])): object 'odd' not found</span></div><div class='input'>
+<span class='co'>## you can specify your recursive function in the trampoline</span>
+<span class='co'>## call if you want.</span>
+<span class='co'>## Return a value using trm_return():</span>
+<span class='fu'>trampoline</span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/Special.html'>factorial</a></span><span class='op'>(</span><span class='fl'>13</span><span class='op'>)</span>,
+           factorial <span class='op'>=</span> <span class='kw'>function</span><span class='op'>(</span><span class='va'>n</span><span class='op'>)</span> <span class='op'>{</span>
+             <span class='kw'>if</span><span class='op'>(</span><span class='va'>n</span> <span class='op'>&lt;=</span> <span class='fl'>1</span><span class='op'>)</span> <span class='op'>{</span>
+               <span class='kw'><a href='https://rdrr.io/r/base/function.html'>return</a></span><span class='op'>(</span><span class='fu'><a href='trm_return.html'>trm_return</a></span><span class='op'>(</span><span class='fl'>1</span><span class='op'>)</span><span class='op'>)</span>
+             <span class='op'>}</span>
+             <span class='va'>val</span> <span class='op'>&lt;-</span> <span class='fu'>yield</span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/Special.html'>factorial</a></span><span class='op'>(</span><span class='va'>n</span> <span class='op'>-</span> <span class='fl'>1</span><span class='op'>)</span><span class='op'>)</span>
+             <span class='kw'><a href='https://rdrr.io/r/base/function.html'>return</a></span><span class='op'>(</span><span class='va'>val</span> <span class='op'>*</span> <span class='va'>n</span><span class='op'>)</span>
+           <span class='op'>}</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; [1] 6227020800</div><div class='input'>
+<span class='co'>## convert to using tail call optimization by wrapping</span>
+<span class='co'>## recursive call in trm_tailcall()</span>
+<span class='fu'>trampoline</span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/Special.html'>factorial</a></span><span class='op'>(</span><span class='fl'>13</span><span class='op'>)</span>,
+           factorial <span class='op'>=</span> <span class='kw'>function</span><span class='op'>(</span><span class='va'>n</span>, <span class='va'>x</span> <span class='op'>=</span> <span class='fl'>1</span><span class='op'>)</span> <span class='op'>{</span>
+             <span class='fu'><a href='https://rdrr.io/r/base/force.html'>force</a></span><span class='op'>(</span><span class='va'>x</span><span class='op'>)</span> <span class='co'>## necessary thanks to R's lazy evaluation</span>
+             <span class='kw'>if</span><span class='op'>(</span><span class='va'>n</span> <span class='op'>&lt;=</span> <span class='fl'>1</span><span class='op'>)</span> <span class='op'>{</span>
+               <span class='kw'><a href='https://rdrr.io/r/base/function.html'>return</a></span><span class='op'>(</span><span class='fu'><a href='trm_return.html'>trm_return</a></span><span class='op'>(</span><span class='va'>x</span><span class='op'>)</span><span class='op'>)</span>
+             <span class='op'>}</span>
+             <span class='va'>val</span> <span class='op'>&lt;-</span> <span class='fu'><a href='trm_tailcall.html'>trm_tailcall</a></span><span class='op'>(</span><span class='fu'><a href='https://rdrr.io/r/base/Special.html'>factorial</a></span><span class='op'>(</span><span class='va'>n</span> <span class='op'>-</span> <span class='fl'>1</span>, <span class='va'>x</span> <span class='op'>*</span> <span class='va'>n</span><span class='op'>)</span><span class='op'>)</span>
+             <span class='kw'><a href='https://rdrr.io/r/base/function.html'>return</a></span><span class='op'>(</span><span class='va'>val</span><span class='op'>)</span>
+           <span class='op'>}</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; [1] 6227020800</div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">

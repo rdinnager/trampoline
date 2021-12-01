@@ -31,7 +31,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../../index.html">trampoline</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="Released version">0.0.0.9000</span>
+        <span class="version label label-danger" data-toggle="tooltip" data-placement="bottom" title="Unreleased version">0.0.0.9000</span>
       </span>
     </div>
 
@@ -65,7 +65,14 @@
   <a href="../../news/index.html">Changelog</a>
 </li>
       </ul>
-<ul class="nav navbar-nav navbar-right"></ul>
+<ul class="nav navbar-nav navbar-right">
+<li>
+  <a href="https://github.com/rdinnager/trampoline/">
+    <span class="fab fa-github fa-lg"></span>
+     
+  </a>
+</li>
+      </ul>
 </div>
 <!--/.nav-collapse -->
   </div>
@@ -81,20 +88,175 @@
       <h1 data-toc-skip>Traversing Trees with Trampolines</h1>
             
       
-      
+      <small class="dont-index">Source: <a href="https://github.com/rdinnager/trampoline/blob/master/vignettes/articles/tree_traversal.Rmd"><code>vignettes/articles/tree_traversal.Rmd</code></a></small>
       <div class="hidden name"><code>tree_traversal.Rmd</code></div>
 
     </div>
 
     
     
+<p>This article goes over a few examples of using the <code>trampoline</code> package to do recursive tree traversals (without fear of hitting the limits of R’s call stack).</p>
+<div id="example-1-phylogenetic-tree-clade-collapse" class="section level1">
+<h1 class="hasAnchor">
+<a href="#example-1-phylogenetic-tree-clade-collapse" class="anchor"></a>Example 1: Phylogenetic Tree Clade Collapse</h1>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va">trampoline</span><span class="op">)</span></code></pre></div>
+<code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/rdinnager/trampoline">trampoline</a></span><span class="op">)</span>
+<span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="http://ape-package.ird.fr/">ape</a></span><span class="op">)</span>
+<span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="http://dahtah.github.io/imager/">imager</a></span><span class="op">)</span>
+<span class="co">#&gt; Warning: package 'imager' was built under R version 4.0.5</span>
+<span class="co">#&gt; Loading required package: magrittr</span>
+<span class="co">#&gt; Warning: package 'magrittr' was built under R version 4.0.3</span>
+<span class="co">#&gt; </span>
+<span class="co">#&gt; Attaching package: 'imager'</span>
+<span class="co">#&gt; The following object is masked from 'package:magrittr':</span>
+<span class="co">#&gt; </span>
+<span class="co">#&gt;     add</span>
+<span class="co">#&gt; The following object is masked from 'package:ape':</span>
+<span class="co">#&gt; </span>
+<span class="co">#&gt;     where</span>
+<span class="co">#&gt; The following objects are masked from 'package:stats':</span>
+<span class="co">#&gt; </span>
+<span class="co">#&gt;     convolve, spectrum</span>
+<span class="co">#&gt; The following object is masked from 'package:graphics':</span>
+<span class="co">#&gt; </span>
+<span class="co">#&gt;     frame</span>
+<span class="co">#&gt; The following object is masked from 'package:base':</span>
+<span class="co">#&gt; </span>
+<span class="co">#&gt;     save.image</span>
+<span class="kw"><a href="https://rdrr.io/r/base/library.html">library</a></span><span class="op">(</span><span class="va"><a href="http://purrr.tidyverse.org">purrr</a></span><span class="op">)</span>
+<span class="co">#&gt; </span>
+<span class="co">#&gt; Attaching package: 'purrr'</span>
+<span class="co">#&gt; The following object is masked from 'package:magrittr':</span>
+<span class="co">#&gt; </span>
+<span class="co">#&gt;     set_names</span></code></pre></div>
+</div>
+<div id="example-2-quadtree-refinement-for-images" class="section level1">
+<h1 class="hasAnchor">
+<a href="#example-2-quadtree-refinement-for-images" class="anchor"></a>Example 2: Quadtree refinement for images</h1>
+<p>This example is partly based on this <a href="https://dahtah.github.io/imager/quadtrees.html">post</a>, which also uses <code>imager</code> to make a quad-tree. Note that R has several functions in different packages for making quad-trees already, so this is just for demonstration purposes. See for example the package <a href="https://cran.r-project.org/web/packages/quadtree/index.html"><code>{quadtree}</code></a>, which makes quad-trees from spatial rasters.</p>
+<p>A quad-tree is a data structure that is often used to approximate two-dimensional grid-like data.</p>
+<div class="figure">
+<img src="figures/Charles_Darwin_1880.jpg" alt=""><p class="caption">An image of Charles Darwin from 1880</p>
+</div>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R">
+<span class="va">im</span> <span class="op">&lt;-</span> <span class="fu">imager</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/imager/man/load.image.html">load.image</a></span><span class="op">(</span><span class="st">"figures/Charles_Darwin_1880.jpg"</span><span class="op">)</span>
+
+<span class="va">quadtree</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">img</span>, <span class="va">sd_thresh</span> <span class="op">=</span> <span class="fl">0.05</span>, <span class="va">type</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html">c</a></span><span class="op">(</span><span class="st">"none"</span>, <span class="st">"borders"</span>, <span class="st">"ellipses"</span><span class="op">)</span>, <span class="va">bg</span> <span class="op">=</span> <span class="st">"black"</span><span class="op">)</span> <span class="op">{</span>
+  <span class="va">type</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/match.arg.html">match.arg</a></span><span class="op">(</span><span class="va">type</span><span class="op">)</span>
+  <span class="co">## calculate the sd of each colour channel and average them</span>
+  <span class="va">imsd</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/imager/man/imsplit.html">imsplit</a></span><span class="op">(</span><span class="va">img</span>, <span class="st">"c"</span><span class="op">)</span> <span class="op">%&gt;%</span>
+    <span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html">map_dbl</a></span><span class="op">(</span><span class="va">sd</span><span class="op">)</span> <span class="op">%&gt;%</span>
+    <span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="op">)</span>
+  <span class="co">## decide whether to split into quads</span>
+  <span class="kw">if</span><span class="op">(</span><span class="va">imsd</span> <span class="op">&lt;</span> <span class="va">sd_thresh</span> <span class="op">||</span> <span class="fu"><a href="https://rdrr.io/r/base/any.html">any</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/dim.html">dim</a></span><span class="op">(</span><span class="va">img</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">2</span><span class="op">]</span> <span class="op">&lt;=</span> <span class="fl">4</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span> <span class="co">## no split, return image with pixels averaged</span>
+    
+    <span class="co">## use circles</span>
+    <span class="va">av_img</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/imager/man/imsplit.html">imsplit</a></span><span class="op">(</span><span class="va">img</span>, <span class="st">"c"</span><span class="op">)</span> <span class="op">%&gt;%</span> 
+        <span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html">map</a></span><span class="op">(</span><span class="op">~</span> <span class="fl">0</span> <span class="op">*</span> <span class="va">.x</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">.x</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span> 
+        <span class="fu"><a href="https://rdrr.io/pkg/imager/man/imappend.html">imappend</a></span><span class="op">(</span><span class="st">"c"</span><span class="op">)</span>
+    
+    <span class="co">## add borders</span>
+    <span class="kw">if</span><span class="op">(</span><span class="va">type</span> <span class="op">==</span> <span class="st">"borders"</span><span class="op">)</span> <span class="op">{</span>
+      <span class="va">av_img</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/imager/man/colorise.html">colorise</a></span><span class="op">(</span><span class="va">av_img</span>, <span class="fu"><a href="https://rdrr.io/pkg/imager/man/common_pixsets.html">px.borders</a></span><span class="op">(</span><span class="va">av_img</span><span class="op">)</span>, <span class="va">bg</span><span class="op">)</span>
+    <span class="op">}</span>
+  
+    <span class="kw">if</span><span class="op">(</span><span class="va">type</span> <span class="op">==</span> <span class="st">"ellipses"</span><span class="op">)</span> <span class="op">{</span>
+      <span class="va">a</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/imager/man/cimg.dimensions.html">width</a></span><span class="op">(</span><span class="va">av_img</span><span class="op">)</span> <span class="op">/</span> <span class="fl">2</span>
+      <span class="va">b</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/imager/man/cimg.dimensions.html">height</a></span><span class="op">(</span><span class="va">av_img</span><span class="op">)</span> <span class="op">/</span> <span class="fl">2</span>
+      <span class="va">ellipse</span> <span class="op">&lt;-</span> <span class="op">(</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/imager/man/imcoord.html">Xc</a></span><span class="op">(</span><span class="va">av_img</span><span class="op">)</span> <span class="op">-</span> <span class="va">a</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span> <span class="op">/</span> <span class="va">a</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span> <span class="op">+</span> <span class="op">(</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/imager/man/imcoord.html">Yc</a></span><span class="op">(</span><span class="va">av_img</span><span class="op">)</span> <span class="op">-</span> <span class="va">b</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span> <span class="op">/</span> <span class="va">b</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">1</span>
+      <span class="va">av_img</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/imager/man/colorise.html">colorise</a></span><span class="op">(</span><span class="va">av_img</span>, <span class="va">ellipse</span>, <span class="va">bg</span><span class="op">)</span>
+    <span class="op">}</span>
+    
+    <span class="kw"><a href="https://rdrr.io/r/base/function.html">return</a></span><span class="op">(</span><span class="va">av_img</span><span class="op">)</span>
+  <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span> <span class="co">## split image and run quadtree on each split </span>
+    <span class="va">img_split</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/imager/man/imsplit.html">imsplit</a></span><span class="op">(</span><span class="va">img</span>, <span class="st">"x"</span>, <span class="fl">2</span><span class="op">)</span> <span class="op">%&gt;%</span>
+      <span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html">map</a></span><span class="op">(</span><span class="op">~</span> <span class="fu"><a href="https://rdrr.io/pkg/imager/man/imsplit.html">imsplit</a></span><span class="op">(</span><span class="va">.x</span>, <span class="st">"y"</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span>
+      <span class="fu"><a href="https://purrr.tidyverse.org/reference/flatten.html">flatten</a></span><span class="op">(</span><span class="op">)</span>
+    
+    <span class="va">quad1</span> <span class="op">&lt;-</span> <span class="fu">quadtree</span><span class="op">(</span><span class="va">img_split</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, sd_thresh <span class="op">=</span> <span class="va">sd_thresh</span>, type <span class="op">=</span> <span class="va">type</span>, bg <span class="op">=</span> <span class="va">bg</span><span class="op">)</span>
+    <span class="va">quad2</span> <span class="op">&lt;-</span> <span class="fu">quadtree</span><span class="op">(</span><span class="va">img_split</span><span class="op">[[</span><span class="fl">2</span><span class="op">]</span><span class="op">]</span>, sd_thresh <span class="op">=</span> <span class="va">sd_thresh</span>, type <span class="op">=</span> <span class="va">type</span>, bg <span class="op">=</span> <span class="va">bg</span><span class="op">)</span>
+    <span class="va">quad3</span> <span class="op">&lt;-</span> <span class="fu">quadtree</span><span class="op">(</span><span class="va">img_split</span><span class="op">[[</span><span class="fl">3</span><span class="op">]</span><span class="op">]</span>, sd_thresh <span class="op">=</span> <span class="va">sd_thresh</span>, type <span class="op">=</span> <span class="va">type</span>, bg <span class="op">=</span> <span class="va">bg</span><span class="op">)</span>
+    <span class="va">quad4</span> <span class="op">&lt;-</span> <span class="fu">quadtree</span><span class="op">(</span><span class="va">img_split</span><span class="op">[[</span><span class="fl">4</span><span class="op">]</span><span class="op">]</span>, sd_thresh <span class="op">=</span> <span class="va">sd_thresh</span>, type <span class="op">=</span> <span class="va">type</span>, bg <span class="op">=</span> <span class="va">bg</span><span class="op">)</span>
+    
+    <span class="co">## recombine quads and return them</span>
+    <span class="va">img_new</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="va">quad1</span>, <span class="va">quad2</span><span class="op">)</span>,
+                    <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="va">quad3</span>, <span class="va">quad4</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span>
+      <span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html">map</a></span><span class="op">(</span><span class="op">~</span> <span class="fu"><a href="https://rdrr.io/pkg/imager/man/imappend.html">imappend</a></span><span class="op">(</span><span class="va">.x</span>, <span class="st">"y"</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span>
+      <span class="fu"><a href="https://rdrr.io/pkg/imager/man/imappend.html">imappend</a></span><span class="op">(</span><span class="st">"x"</span><span class="op">)</span>
+    
+    <span class="kw"><a href="https://rdrr.io/r/base/function.html">return</a></span><span class="op">(</span><span class="va">img_new</span><span class="op">)</span>
+  <span class="op">}</span>
+<span class="op">}</span></code></pre></div>
+<p>Now to test that out!</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R">
+<span class="va">quad_darwin</span> <span class="op">&lt;-</span> <span class="fu">quadtree</span><span class="op">(</span><span class="va">im</span>, sd_thresh <span class="op">=</span> <span class="fl">0.1</span>, type <span class="op">=</span> <span class="st">"ellipses"</span><span class="op">)</span>
+<span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html">plot</a></span><span class="op">(</span><span class="va">quad_darwin</span><span class="op">)</span></code></pre></div>
+<p><img src="tree_traversal_files/figure-html/run_quadtree-1.png" width="700"></p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R">
+<span class="va">trm_quadtree</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">img</span>, <span class="va">sd_thresh</span> <span class="op">=</span> <span class="fl">0.05</span>, <span class="va">type</span> <span class="op">=</span> <span class="st">"none"</span>, <span class="va">bg</span> <span class="op">=</span> <span class="st">"black"</span><span class="op">)</span> <span class="op">{</span>
+  <span class="co">## removed the match.arg() for type as this doesn't seem to work in a generator?</span>
+  <span class="co">## calculate the sd of each colour channel and average them</span>
+  <span class="va">imsd</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/imager/man/imsplit.html">imsplit</a></span><span class="op">(</span><span class="va">img</span>, <span class="st">"c"</span><span class="op">)</span> <span class="op">%&gt;%</span>
+    <span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html">map_dbl</a></span><span class="op">(</span><span class="va">sd</span><span class="op">)</span> <span class="op">%&gt;%</span>
+    <span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="op">)</span>
+  <span class="co">## decide whether to split into quads</span>
+  <span class="kw">if</span><span class="op">(</span><span class="va">imsd</span> <span class="op">&lt;</span> <span class="va">sd_thresh</span> <span class="op">||</span> <span class="fu"><a href="https://rdrr.io/r/base/any.html">any</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/dim.html">dim</a></span><span class="op">(</span><span class="va">img</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">2</span><span class="op">]</span> <span class="op">&lt;=</span> <span class="fl">4</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span> <span class="co">## no split, return image with pixels averaged</span>
+    
+    <span class="co">## use circles</span>
+    <span class="va">av_img</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/imager/man/imsplit.html">imsplit</a></span><span class="op">(</span><span class="va">img</span>, <span class="st">"c"</span><span class="op">)</span> <span class="op">%&gt;%</span> 
+        <span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html">map</a></span><span class="op">(</span><span class="op">~</span> <span class="fl">0</span> <span class="op">*</span> <span class="va">.x</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html">mean</a></span><span class="op">(</span><span class="va">.x</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span> 
+        <span class="fu"><a href="https://rdrr.io/pkg/imager/man/imappend.html">imappend</a></span><span class="op">(</span><span class="st">"c"</span><span class="op">)</span>
+    
+    <span class="co">## add borders</span>
+    <span class="kw">if</span><span class="op">(</span><span class="va">type</span> <span class="op">==</span> <span class="st">"borders"</span><span class="op">)</span> <span class="op">{</span>
+      <span class="va">av_img</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/imager/man/colorise.html">colorise</a></span><span class="op">(</span><span class="va">av_img</span>, <span class="fu"><a href="https://rdrr.io/pkg/imager/man/common_pixsets.html">px.borders</a></span><span class="op">(</span><span class="va">av_img</span><span class="op">)</span>, <span class="va">bg</span><span class="op">)</span>
+    <span class="op">}</span>
+  
+    <span class="kw">if</span><span class="op">(</span><span class="va">type</span> <span class="op">==</span> <span class="st">"ellipses"</span><span class="op">)</span> <span class="op">{</span>
+      <span class="va">a</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/imager/man/cimg.dimensions.html">width</a></span><span class="op">(</span><span class="va">av_img</span><span class="op">)</span> <span class="op">/</span> <span class="fl">2</span>
+      <span class="va">b</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/imager/man/cimg.dimensions.html">height</a></span><span class="op">(</span><span class="va">av_img</span><span class="op">)</span> <span class="op">/</span> <span class="fl">2</span>
+      <span class="va">ellipse</span> <span class="op">&lt;-</span> <span class="op">(</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/imager/man/imcoord.html">Xc</a></span><span class="op">(</span><span class="va">av_img</span><span class="op">)</span> <span class="op">-</span> <span class="va">a</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span> <span class="op">/</span> <span class="va">a</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span> <span class="op">+</span> <span class="op">(</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/imager/man/imcoord.html">Yc</a></span><span class="op">(</span><span class="va">av_img</span><span class="op">)</span> <span class="op">-</span> <span class="va">b</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span> <span class="op">/</span> <span class="va">b</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">1</span>
+      <span class="va">av_img</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/imager/man/colorise.html">colorise</a></span><span class="op">(</span><span class="va">av_img</span>, <span class="va">ellipse</span>, <span class="va">bg</span><span class="op">)</span>
+    <span class="op">}</span>
+    
+    <span class="co">## just add trm_return()</span>
+    <span class="kw"><a href="https://rdrr.io/r/base/function.html">return</a></span><span class="op">(</span><span class="fu"><a href="../../reference/trm_return.html">trm_return</a></span><span class="op">(</span><span class="va">av_img</span><span class="op">)</span><span class="op">)</span>
+  <span class="op">}</span> <span class="kw">else</span> <span class="op">{</span> <span class="co">## split image and run quadtree on each split </span>
+    <span class="va">img_split</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/imager/man/imsplit.html">imsplit</a></span><span class="op">(</span><span class="va">img</span>, <span class="st">"x"</span>, <span class="fl">2</span><span class="op">)</span> <span class="op">%&gt;%</span>
+      <span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html">map</a></span><span class="op">(</span><span class="op">~</span> <span class="fu"><a href="https://rdrr.io/pkg/imager/man/imsplit.html">imsplit</a></span><span class="op">(</span><span class="va">.x</span>, <span class="st">"y"</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span>
+      <span class="fu"><a href="https://purrr.tidyverse.org/reference/flatten.html">flatten</a></span><span class="op">(</span><span class="op">)</span>
+    
+    <span class="co">## just add yield()</span>
+    <span class="va">quad1</span> <span class="op">&lt;-</span> <span class="fu">yield</span><span class="op">(</span><span class="fu">trm_quadtree</span><span class="op">(</span><span class="va">img_split</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, sd_thresh <span class="op">=</span> <span class="va">sd_thresh</span>, type <span class="op">=</span> <span class="va">type</span>, bg <span class="op">=</span> <span class="va">bg</span><span class="op">)</span><span class="op">)</span>
+    <span class="va">quad2</span> <span class="op">&lt;-</span> <span class="fu">yield</span><span class="op">(</span><span class="fu">trm_quadtree</span><span class="op">(</span><span class="va">img_split</span><span class="op">[[</span><span class="fl">2</span><span class="op">]</span><span class="op">]</span>, sd_thresh <span class="op">=</span> <span class="va">sd_thresh</span>, type <span class="op">=</span> <span class="va">type</span>, bg <span class="op">=</span> <span class="va">bg</span><span class="op">)</span><span class="op">)</span>
+    <span class="va">quad3</span> <span class="op">&lt;-</span> <span class="fu">yield</span><span class="op">(</span><span class="fu">trm_quadtree</span><span class="op">(</span><span class="va">img_split</span><span class="op">[[</span><span class="fl">3</span><span class="op">]</span><span class="op">]</span>, sd_thresh <span class="op">=</span> <span class="va">sd_thresh</span>, type <span class="op">=</span> <span class="va">type</span>, bg <span class="op">=</span> <span class="va">bg</span><span class="op">)</span><span class="op">)</span>
+    <span class="va">quad4</span> <span class="op">&lt;-</span> <span class="fu">yield</span><span class="op">(</span><span class="fu">trm_quadtree</span><span class="op">(</span><span class="va">img_split</span><span class="op">[[</span><span class="fl">4</span><span class="op">]</span><span class="op">]</span>, sd_thresh <span class="op">=</span> <span class="va">sd_thresh</span>, type <span class="op">=</span> <span class="va">type</span>, bg <span class="op">=</span> <span class="va">bg</span><span class="op">)</span><span class="op">)</span>
+    
+    <span class="co">## recombine quads and return them</span>
+    <span class="va">img_new</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="va">quad1</span>, <span class="va">quad2</span><span class="op">)</span>,
+                    <span class="fu"><a href="https://rdrr.io/r/base/list.html">list</a></span><span class="op">(</span><span class="va">quad3</span>, <span class="va">quad4</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span>
+      <span class="fu"><a href="https://purrr.tidyverse.org/reference/map.html">map</a></span><span class="op">(</span><span class="op">~</span> <span class="fu"><a href="https://rdrr.io/pkg/imager/man/imappend.html">imappend</a></span><span class="op">(</span><span class="va">.x</span>, <span class="st">"y"</span><span class="op">)</span><span class="op">)</span> <span class="op">%&gt;%</span>
+      <span class="fu"><a href="https://rdrr.io/pkg/imager/man/imappend.html">imappend</a></span><span class="op">(</span><span class="st">"x"</span><span class="op">)</span>
+    
+    <span class="co">## just add trm_return()</span>
+    <span class="kw"><a href="https://rdrr.io/r/base/function.html">return</a></span><span class="op">(</span><span class="fu"><a href="../../reference/trm_return.html">trm_return</a></span><span class="op">(</span><span class="va">img_new</span><span class="op">)</span><span class="op">)</span>
+  <span class="op">}</span>
+<span class="op">}</span>
+
+<span class="va">trm_quad_darwin</span> <span class="op">&lt;-</span> <span class="fu"><a href="../../reference/trampoline.html">trampoline</a></span><span class="op">(</span><span class="fu">trm_quadtree</span><span class="op">(</span><span class="va">im</span>, sd_thresh <span class="op">=</span> <span class="fl">0.1</span>, type <span class="op">=</span> <span class="st">"ellipses"</span><span class="op">)</span><span class="op">)</span>
+<span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html">plot</a></span><span class="op">(</span><span class="va">trm_quad_darwin</span><span class="op">)</span></code></pre></div>
+<p><img src="tree_traversal_files/figure-html/quadtree_trm-1.png" width="700"></p>
+</div>
   </div>
 
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
 
-      </div>
+        <nav id="toc" data-toggle="toc"><h2 data-toc-skip>Contents</h2>
+    </nav>
+</div>
 
 </div>
 

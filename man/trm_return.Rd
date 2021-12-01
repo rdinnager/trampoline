@@ -13,5 +13,16 @@ trm_return(x)
 \code{x} with added class attribute 'trampoline_return'
 }
 \description{
-Flag a return value
+Wrap a return value in your recursive function with \code{trm_return()}
+to have it passed along and returned by your final recursion.
+}
+\examples{
+trampoline(factorial(13),
+           factorial = function(n) {
+             if(n <= 1) {
+               return(trm_return(1))
+             }
+             val <- yield(factorial(n - 1))
+             return(val * n)
+           })
 }

@@ -5,13 +5,13 @@
 #' recurse theoretically forever (but usually just more than can be handled by R's
 #' default call stack limits).
 #'
-#' @param call A call to a generator function. The generator function can be
-#' one defined already in the calling environment or higher (using [coro::generator()]),
-#' or can be defined as an argument to `trampoline()`, see `...` argument.
-#' @param ... A named list of generator functions. Named arguments are generator function
-#' definitions where the name of the argument should be the desired name of the function
-#' (that is referred to also within the function for recursion, see examples to get a clearer
-#' idea of what this means). Passing multiple named arguments is possible and
+#' @param call A call to a function or generator function. The function can be
+#' one defined already in the calling environment or higher or can be defined as an argument
+#' to `trampoline()`, see `...` argument.
+#' @param ... A named list of functions or generator functions. Named arguments are function or
+#' generator function definitions where the name of the argument should be the desired name of
+#' the function (that is referred to also within the function for recursion, see examples to
+#' get a clearer idea of what this means). Passing multiple named arguments is possible and
 #' allows specification of functions that can be used within the generator function that is
 #' called in `call` (again, the examples might make this clearer).
 #'
@@ -22,6 +22,82 @@
 #' @export
 #' @importFrom compiler enableJIT
 #' @examples
+#' ## standard recursive function exhausts stack:
+#' print_numbers <- function(n) {
+#'   if(n >= 1) {
+#'     print_numbers(n - 1)
+#'     print(n)
+#'   }
+#' }
+#' try(print_numbers(5000))
+#'
+#' ## use trampoline with a coro generator instead
+#' print_numbers <- coro::generator(function(n) {
+#'   if(n >= 1) {
+#'     yield(print_numbers(n - 1))
+#'     print(n)
+#'   }
+#' })
+#' nums <- capture.output(
+#'   trampoline(print_numbers(5000))
+#' )
+#' cat(tail(nums))
+#'
+#' ## Or just use a plain function (but still use yield())
+#' print_numbers <- function(n) {
+#'   if(n >= 1) {
+#'     yield(print_numbers(n - 1))
+#'     print(n)
+#'   }
+#' }
+#' nums <- capture.output(
+#'   trampoline(print_numbers(5000))
+#' )
+#' cat(tail(nums))
+#'
+#' ## use an alias or another
+#' tramampoline(print_numbers(5000))
+#' trambopoline(print_numbers(5000))
+#'
+#' ## use multiple mutually recursive functions
+#' even <- function(n) {
+#'   if (n == 0) trm_return(TRUE) else yield(odd(n - 1))
+#' }
+#'
+#' odd <- function(n) {
+#'   if (n == 0) trm_return(FALSE) else yield(even(n - 1))
+#' }
+#'
+#' ## doesn't work (you must pass odd in because trampoline
+#' ## only converts first called function to generator by default)
+#' try(trampoline(even(10000)))
+#'
+#' ## does work
+#' trampoline(even(10000), odd = odd)
+#'
+#' ## you can specify your recursive function in the trampoline
+#' ## call if you want.
+#' ## Return a value using trm_return():
+#' trampoline(factorial(13),
+#'            factorial = function(n) {
+#'              if(n <= 1) {
+#'                return(trm_return(1))
+#'              }
+#'              val <- yield(factorial(n - 1))
+#'              return(val * n)
+#'            })
+#'
+#' ## convert to using tail call optimization by wrapping
+#' ## recursive call in trm_tailcall()
+#' trampoline(factorial(13),
+#'            factorial = function(n, x = 1) {
+#'              force(x) ## necessary thanks to R's lazy evaluation
+#'              if(n <= 1) {
+#'                return(trm_return(x))
+#'              }
+#'              val <- trm_tailcall(factorial(n - 1, x * n))
+#'              return(val)
+#'            })
 trampoline <- function(call, ...) {
   ## need this to disable byte compilation temporarily, because without disabling
   ## R attempts to compile every generator instance and it creates massive overhead
@@ -38,11 +114,17 @@ trampoline <- function(call, ...) {
      stop("the value of a named argument to trampoline must be a function or generator")
     }
     if(!inherits(func, "coro_generator")) {
-     func <- coro::generator(rlang::call2(
-       "function",
-       rlang::fn_fmls(func),
-       rlang::fn_body(func)
-     ))
+      func <- do.call(coro::generator,
+                      list(
+                        rlang::expr(
+                          !!rlang::call2(
+                            "function",
+                            rlang::fn_fmls(func),
+                            rlang::fn_body(func)
+                            )
+                          )
+                        )
+      )
     }
     if(!inherits(func, "coro_generator")) {
      stop("recursive function must be a generator")
@@ -62,11 +144,17 @@ trampoline <- function(call, ...) {
         stop("call must be a call to a function or generator")
       }
       if(!inherits(func, "coro_generator")) {
-        func <- coro::generator(rlang::call2(
-          "function",
-          rlang::fn_fmls(func),
-          rlang::fn_body(func)
-        ))
+        func <- do.call(coro::generator,
+                        list(
+                          rlang::expr(
+                            !!rlang::call2(
+                              "function",
+                              rlang::fn_fmls(func),
+                              rlang::fn_body(func)
+                            )
+                          )
+                        )
+        )
       }
       if(!inherits(func, "coro_generator")) {
         stop("recursive function must be a generator")
@@ -116,25 +204,38 @@ trampoline <- function(call, ...) {
   if(is.null(retval)) {
     return(invisible(retval))
   } else {
-    return(unclass(retval))
+    class_stripped <- class(retval)
+    class_stripped <- class_stripped[class_stripped != "trampoline_return"]
+    if(length(class_stripped) > 0) {
+      class(retval) <- class_stripped
+    } else {
+      retval <- unclass(retval)
+    }
+    return(retval)
   }
 
 
 }
 
-#' @inherit trampoline
+#' @rdname trampoline
 #' @export
-tramampoline <- function(...) {
-  trampoline(...)
+tramampoline <- function(call, ...) {
+  trampoline(call = {{ call }}, ...)
 }
 
-#' @inherit trampoline
+#' @rdname trampoline
 #' @export
-trambopoline <- function(...) {
-  trampoline(...)
+trambopoline <- function(call, ...) {
+  trampoline(call = {{ call }}, ...)
 }
 
 #' Flag a tail call
+#'
+#' If you can specify your recursive function such that the
+#' recursive call is in 'tail position' (that is, the very
+#' last operation in your function), you can take advantage
+#' of tail call optimization. Just wrap your recursive call
+#' in `trm_tailcall()`
 #'
 #' @param x A recursive call within generator fed to [trampoline()]
 #'
@@ -142,6 +243,15 @@ trambopoline <- function(...) {
 #' @export
 #'
 #' @examples
+#' trampoline(factorial(13),
+#'            factorial = function(n, x = 1) {
+#'              force(x) ## necessary thanks to R's lazy evaluation
+#'              if(n <= 1) {
+#'                return(trm_return(x))
+#'              }
+#'              val <- trm_tailcall(factorial(n - 1, x * n))
+#'              return(val)
+#'            })
 trm_tailcall <- function(x) {
   structure(x,
             class = "trampoline_tailcall")
@@ -149,15 +259,26 @@ trm_tailcall <- function(x) {
 
 #' Flag a return value
 #'
+#' Wrap a return value in your recursive function with `trm_return()`
+#' to have it passed along and returned by your final recursion.
+#'
 #' @param x A value to be returned at the end of all recursions
 #'
 #' @return `x` with added class attribute 'trampoline_return'
 #' @export
 #'
 #' @examples
+#' trampoline(factorial(13),
+#'            factorial = function(n) {
+#'              if(n <= 1) {
+#'                return(trm_return(1))
+#'              }
+#'              val <- yield(factorial(n - 1))
+#'              return(val * n)
+#'            })
 trm_return <- function(x) {
   structure(x,
-            class = "trampoline_return")
+            class = c(class(x), "trampoline_return"))
 }
 
 

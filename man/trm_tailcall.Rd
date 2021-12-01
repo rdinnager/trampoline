@@ -13,5 +13,20 @@ trm_tailcall(x)
 \code{x} with added class attribute 'trampoline_tailcall'
 }
 \description{
-Flag a tail call
+If you can specify your recursive function such that the
+recursive call is in 'tail position' (that is, the very
+last operation in your function), you can take advantage
+of tail call optimization. Just wrap your recursive call
+in \code{trm_tailcall()}
+}
+\examples{
+trampoline(factorial(13),
+           factorial = function(n, x = 1) {
+             force(x) ## necessary thanks to R's lazy evaluation
+             if(n <= 1) {
+               return(trm_return(x))
+             }
+             val <- trm_tailcall(factorial(n - 1, x * n))
+             return(val)
+           })
 }

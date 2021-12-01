@@ -24,6 +24,94 @@ You can install the development version from
 devtools::install_github("rdinnager/trampoline")
 ```
 
+## Quick Example
+
+If you don’t know what a trampoline is see below. Otherwise, here is a
+quick example to show how this package works. Write a recursive
+function, but wrap your recursive call in `yield()`. It will work
+theoretically no matter how deep you recurse. For example, trivially:
+
+``` r
+library(trampoline)
+
+trampoline(print_numbers(10), print_numbers = function(n) {
+  if(n >= 1) {
+    yield(print_numbers(n - 1))
+    print(n)
+  }
+})
+#> [1] 1
+#> [1] 2
+#> [1] 3
+#> [1] 4
+#> [1] 5
+#> [1] 6
+#> [1] 7
+#> [1] 8
+#> [1] 9
+#> [1] 10
+```
+
+Go deep:
+
+``` r
+all_nums <- capture.output(trampoline(print_numbers(100000), 
+                                      print_numbers = function(n) {
+                                        if(n >= 1) {
+                                          yield(print_numbers(n - 1))
+                                          print(n)
+                                          }
+                                        }
+                                      )
+                           )
+head(all_nums)
+#> [1] "[1] 1" "[1] 2" "[1] 3" "[1] 4" "[1] 5" "[1] 6"
+tail(all_nums)
+#> [1] "[1] 99995" "[1] 99996" "[1] 99997" "[1] 99998" "[1] 99999" "[1] 1e+05"
+```
+
+This doesn’t work without `trampoline()`:
+
+``` r
+print_numbers <- function(n) {
+  if(n >= 1) {
+    print_numbers(n - 1)
+    print(n)
+  }
+}
+print_numbers(100000)
+#> Error: evaluation nested too deeply: infinite recursion / options(expressions=)?
+```
+
+For those who have trouble with the word trampoline, we can also do:
+
+``` r
+tramampoline(
+  even(10000),
+  even = function(n) {
+    if (n == 0) trm_return(TRUE) else yield(odd(n - 1))
+  }, 
+  odd = function(n) {
+    if (n == 0) trm_return(FALSE) else yield(even(n - 1))
+  }
+)
+#> [1] TRUE
+
+trambopoline(
+  factorial(12),
+  factorial = function(n) {
+    if(n <= 1) {
+      return(trm_return(1))
+    }
+    val <- yield(factorial(n - 1))
+    return(val * n)
+  }
+)
+#> [1] 479001600
+```
+
+# Details
+
 This package and this vignette are heavily inspired by the `trampoline`
 package in Python (<https://gitlab.com/ferreum/trampoline>). In fact,
 this package is more or less a straight port of that package to R, and
@@ -38,7 +126,7 @@ by Eli Bendersky that also goes into a number of related programming
 concepts and is a really interesting read (though it is focused on
 Python and Clojure).
 
-# What is Trampolining?
+## What is Trampolining?
 
 In brief, trampolining is a method of doing recursive programming that
 let’s you theoretically recurse infinitely. Why can’t you do this
@@ -113,17 +201,39 @@ print_numbers <- coro::generator(function(n) {
 
 catch <- capture.output(trampoline(print_numbers(10000))) ## capture output to prevent flooding document with numbers
 head(catch)
-#> [1] "[1] \"call\"    \"dots\"    \"i\"       \"old_jit\""
-#> [2] "[1] 1"                                              
-#> [3] "[1] 2"                                              
-#> [4] "[1] 3"                                              
-#> [5] "[1] 4"                                              
-#> [6] "[1] 5"
+#> [1] "[1] 1" "[1] 2" "[1] 3" "[1] 4" "[1] 5" "[1] 6"
 tail(catch)
 #> [1] "[1] 9995"  "[1] 9996"  "[1] 9997"  "[1] 9998"  "[1] 9999"  "[1] 10000"
 ```
 
-`trampoline` also works with recursive function that return a value at
+Note that you don’t have to call `coro::generator()` yourself. If you
+pass a plain function to `trampoline()` it will convert it to a
+generator for you. This works too:
+
+``` r
+print_numbers <- function(n) {
+  if(n >= 1) {
+    yield(print_numbers(n - 1))
+    print(n)
+  }
+}
+
+trampoline(print_numbers(5))
+#> [1] 1
+#> [1] 2
+#> [1] 3
+#> [1] 4
+#> [1] 5
+```
+
+Note also that, as seen at the beginning of the readme, you can pass
+your recursive functions as named arguments to `trampoline()`, which
+allows you to define the function within your `trampoline()` call if you
+wish.
+
+## Return Values
+
+`trampoline` also works with recursive functions that return a value at
 the end. To return a final value you just need to wrap the return value
 with the `trm_return()` function. This flags to `trampoline` that this
 should be returned from the final recursion of the function. Here is an
@@ -152,19 +262,19 @@ The `trampoline()` version runs fine, and shows us that the factorial of
 `Inf`).
 
 ``` r
-factorial1 <- coro::generator(function(n) {
+factorial1 <- function(n) {
   if(n <= 1) {
     return(trm_return(1))
   }
   val <- yield(factorial1(n - 1))
   return(val * n)
 }
-)
 
 trampoline(factorial1(5000))
-#> [1] "call"    "dots"    "i"       "old_jit"
 #> [1] Inf
 ```
+
+## Performance
 
 With the standard `trampoline` approach, generator functions spawn
 generator functions, and each generator is stored in a list internally.
@@ -193,17 +303,16 @@ call. However, this function can be transformed into a tail call
 recursion with the help of an additional argument:
 
 ``` r
-factorial2 <- coro::generator(function(n, x = 1) {
+factorial2 <- function(n, x = 1) {
   force(x) ## necessary thanks to R's lazy evaluation
   if(n <= 1) {
     return(trm_return(x))
   }
   val <- trm_tailcall(factorial2(n - 1, x * n))
   return(val)
-})
+}
 
 trampoline(factorial2(5000))
-#> [1] "call"    "dots"    "i"       "old_jit"
 #> [1] Inf
 ```
 
@@ -231,10 +340,8 @@ smaller `n` where the regular recursive version will work.
 factorial(10)
 #> [1] 3628800
 trampoline(factorial1(10))
-#> [1] "call"    "dots"    "i"       "old_jit"
 #> [1] 3628800
 trampoline(factorial2(10))
-#> [1] "call"    "dots"    "i"       "old_jit"
 #> [1] 3628800
 ```
 
@@ -252,38 +359,6 @@ bench_res <- bench::mark(trampoline(factorial1(1000)),
                          trampoline(factorial1(10000)), 
                          trampoline(factorial2(10000)),
                          check = FALSE, iterations = 3)
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
-#> [1] "call"    "dots"    "i"       "old_jit"
 #> Warning: Some expressions had a GC in every iteration; so filtering is disabled.
 
 plot(as.numeric(bench_res$mem_alloc)[c(TRUE, FALSE)] ~ c(1000, 2000, 5000, 10000), type = "l", col = "red", 
@@ -350,18 +425,38 @@ odd <- coro::generator(function(n) {
 })
 
 trampoline(even(10000))
-#> [1] "call"    "dots"    "i"       "old_jit"
 #> [1] TRUE
 trampoline(even(10001))
-#> [1] "call"    "dots"    "i"       "old_jit"
 #> [1] FALSE
 
 trampoline(odd(10000))
-#> [1] "call"    "dots"    "i"       "old_jit"
 #> [1] FALSE
 trampoline(odd(10001))
-#> [1] "call"    "dots"    "i"       "old_jit"
 #> [1] TRUE
+```
+
+Note that the above only works if you specify the recursive functions
+directly as generators, and not plain functions. This is because the
+`odd()` function won’t be converted to a generator by `trampoline()`
+because it doesn’t ‘know’ about it. You can get around this by passing
+the `odd()` function in as a named argument like this:
+
+``` r
+even <- function(n) {
+  if (n == 0) trm_return(TRUE) else yield(odd(n - 1))
+}
+
+odd <- function(n) {
+  if (n == 0) trm_return(FALSE) else yield(even(n - 1))
+}
+
+## doesn't work
+trampoline(even(10000))
+#> Error in odd(n - 1): could not find function "odd"
+
+## does work
+trampoline(even(10000), odd = odd)
+#> Error in rlang::eval_bare(rlang::quo_get_expr(dots[[i]])): object 'odd' not found
 ```
 
 An example where `trampoline` can really shine is in branching recursive
