@@ -65,14 +65,12 @@ print_numbers <- function(n) {
     print(n)
   }
 }
-nums <- capture.output(
-  trampoline(print_numbers(5000))
-)
-cat(tail(nums))
+
+trampoline(print_numbers(5))
 
 ## use an alias or another
-tramampoline(print_numbers(5000))
-trambopoline(print_numbers(5000))
+tramampoline(print_numbers(5))
+trambopoline(print_numbers(5))
 
 ## use multiple mutually recursive functions
 even <- function(n) {
@@ -85,10 +83,10 @@ odd <- function(n) {
 
 ## doesn't work (you must pass odd in because trampoline
 ## only converts first called function to generator by default)
-try(trampoline(even(10000)))
+try(trampoline(even(100)))
 
 ## does work
-trampoline(even(10000), odd = odd)
+trampoline(even(100), odd = odd)
 
 ## you can specify your recursive function in the trampoline
 ## call if you want.
