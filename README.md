@@ -11,7 +11,8 @@
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 <!-- badges: end -->
 
-The goal of trampoline is to …
+The goal of `trampoline` is to help make deeply recursive functions that
+avoid overflowing th call stack.
 
 ## Installation
 
@@ -112,7 +113,12 @@ print_numbers <- coro::generator(function(n) {
 
 catch <- capture.output(trampoline(print_numbers(10000))) ## capture output to prevent flooding document with numbers
 head(catch)
-#> [1] "[1] 1" "[1] 2" "[1] 3" "[1] 4" "[1] 5" "[1] 6"
+#> [1] "[1] \"call\"    \"dots\"    \"i\"       \"old_jit\""
+#> [2] "[1] 1"                                              
+#> [3] "[1] 2"                                              
+#> [4] "[1] 3"                                              
+#> [5] "[1] 4"                                              
+#> [6] "[1] 5"
 tail(catch)
 #> [1] "[1] 9995"  "[1] 9996"  "[1] 9997"  "[1] 9998"  "[1] 9999"  "[1] 10000"
 ```
@@ -156,6 +162,7 @@ factorial1 <- coro::generator(function(n) {
 )
 
 trampoline(factorial1(5000))
+#> [1] "call"    "dots"    "i"       "old_jit"
 #> [1] Inf
 ```
 
@@ -196,6 +203,7 @@ factorial2 <- coro::generator(function(n, x = 1) {
 })
 
 trampoline(factorial2(5000))
+#> [1] "call"    "dots"    "i"       "old_jit"
 #> [1] Inf
 ```
 
@@ -223,8 +231,10 @@ smaller `n` where the regular recursive version will work.
 factorial(10)
 #> [1] 3628800
 trampoline(factorial1(10))
+#> [1] "call"    "dots"    "i"       "old_jit"
 #> [1] 3628800
 trampoline(factorial2(10))
+#> [1] "call"    "dots"    "i"       "old_jit"
 #> [1] 3628800
 ```
 
@@ -242,6 +252,38 @@ bench_res <- bench::mark(trampoline(factorial1(1000)),
                          trampoline(factorial1(10000)), 
                          trampoline(factorial2(10000)),
                          check = FALSE, iterations = 3)
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
+#> [1] "call"    "dots"    "i"       "old_jit"
 #> Warning: Some expressions had a GC in every iteration; so filtering is disabled.
 
 plot(as.numeric(bench_res$mem_alloc)[c(TRUE, FALSE)] ~ c(1000, 2000, 5000, 10000), type = "l", col = "red", 
@@ -308,13 +350,17 @@ odd <- coro::generator(function(n) {
 })
 
 trampoline(even(10000))
+#> [1] "call"    "dots"    "i"       "old_jit"
 #> [1] TRUE
 trampoline(even(10001))
+#> [1] "call"    "dots"    "i"       "old_jit"
 #> [1] FALSE
 
 trampoline(odd(10000))
+#> [1] "call"    "dots"    "i"       "old_jit"
 #> [1] FALSE
 trampoline(odd(10001))
+#> [1] "call"    "dots"    "i"       "old_jit"
 #> [1] TRUE
 ```
 
