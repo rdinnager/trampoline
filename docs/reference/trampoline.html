@@ -212,7 +212,7 @@ side-effects). See the examples for how this works.</p>
 #&gt; [1] 5</div><div class='input'>
 <span class='co'>## use an alias or another</span>
 <span class='fu'>tramampoline</span><span class='op'>(</span><span class='fu'>print_numbers</span><span class='op'>(</span><span class='fl'>5</span><span class='op'>)</span><span class='op'>)</span>
-</div><div class='output co'>#&gt; <span class='error'>Error in trampoline(call = {    {        call    }}, ...): call must be a call to a function or generator</span></div><div class='input'><span class='fu'>trambopoline</span><span class='op'>(</span><span class='fu'>print_numbers</span><span class='op'>(</span><span class='fl'>5</span><span class='op'>)</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; <span class='error'>Error: `yield()` can't be called directly or within function arguments</span></div><div class='input'><span class='fu'>trambopoline</span><span class='op'>(</span><span class='fu'>print_numbers</span><span class='op'>(</span><span class='fl'>5</span><span class='op'>)</span><span class='op'>)</span>
 </div><div class='output co'>#&gt; <span class='error'>Error in trampoline(call = {    {        call    }}, ...): call must be a call to a function or generator</span></div><div class='input'>
 <span class='co'>## use multiple mutually recursive functions</span>
 <span class='va'>even</span> <span class='op'>&lt;-</span> <span class='kw'>function</span><span class='op'>(</span><span class='va'>n</span><span class='op'>)</span> <span class='op'>{</span>

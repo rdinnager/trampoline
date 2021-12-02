@@ -102,12 +102,13 @@ trampoline <- function(call, ...) {
   old_jit <- compiler::enableJIT(0)
   on.exit(compiler::enableJIT(old_jit), add = TRUE)
 
-  dots <- rlang::enquos(..., .check_assign = TRUE, .named = TRUE)
+  dots <- rlang::enexprs(..., .check_assign = TRUE, .named = TRUE)
   call <- rlang::enquo(call)
 
   for(i in seq_along(dots)) {
 
-    func <- eval(rlang::quo_get_expr(dots[[i]]), envir = rlang::caller_env())
+    func <- eval(dots[[i]], envir = rlang::caller_env())
+
     if(!rlang::is_function(func)) {
      stop("the value of a named argument to trampoline must be a function or generator")
     }
@@ -123,6 +124,18 @@ trampoline <- function(call, ...) {
                           )
                         )
       )
+    } else {
+      ## note to remember why I did this because it was a bit tricky
+      ## I need to make sure that any calls to coro::generator in the arguments
+      ## are evaluated inside this function so it can find the binding to its
+      ## recursive call, which is also in this environment.
+      ## But if a generator has been passed as a symbol binding a generator
+      ## in the calling environment, we want it evaluated in the calling
+      ## environment so that it can find the binding to its recursive call there
+      ## So that is why we reevaluate here if we have a call to generator()
+      if(rlang::is_call(dots[[i]], "generator")) {
+        func <- eval(dots[[i]])
+      }
     }
     if(!inherits(func, "coro_generator")) {
      stop("recursive function must be a generator")

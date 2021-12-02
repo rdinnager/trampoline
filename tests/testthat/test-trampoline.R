@@ -71,44 +71,57 @@ test_that("named arguments for trampoline work", {
     "\\[1\\] 1\\n\\[1\\] 2\\n\\[1\\] 3\\n\\[1\\] 4\\n\\[1\\] 5"
   )
 
+  print_nums <- coro::generator(function(n) {
+    if(n >= 1) {
+      yield(print_nums(n - 1))
+      print(n)
+    }
+  })
+
+  expect_output(
+    trampoline(print_nums(5),
+               print_nums = print_nums),
+    "\\[1\\] 1\\n\\[1\\] 2\\n\\[1\\] 3\\n\\[1\\] 4\\n\\[1\\] 5"
+  )
+
   expect_true(
     trampoline(even(10),
-               even = coro::generator(function(n) {
+               even = function(n) {
                  if (n == 0) trm_return(TRUE) else yield(odd(n - 1))
-                }),
-               odd = coro::generator(function(n) {
+                },
+               odd = function(n) {
                  if (n == 0) trm_return(FALSE) else yield(even(n - 1))
-                }))
+                })
   )
 
   expect_false(
     trampoline(even(11),
-               even = coro::generator(function(n) {
+               even = function(n) {
                  if (n == 0) trm_return(TRUE) else yield(odd(n - 1))
-               }),
-               odd = coro::generator(function(n) {
+               },
+               odd = function(n) {
                  if (n == 0) trm_return(FALSE) else yield(even(n - 1))
-               }))
+               })
   )
 
   expect_true(
     trampoline(odd(11),
-               even = coro::generator(function(n) {
+               even = function(n) {
                  if (n == 0) trm_return(TRUE) else yield(odd(n - 1))
-               }),
-               odd = coro::generator(function(n) {
+               },
+               odd = function(n) {
                  if (n == 0) trm_return(FALSE) else yield(even(n - 1))
-               }))
+               })
   )
 
   expect_false(
     trampoline(odd(10),
-               even = coro::generator(function(n) {
+               even = function(n) {
                  if (n == 0) trm_return(TRUE) else yield(odd(n - 1))
-               }),
-               odd = coro::generator(function(n) {
+               },
+               odd = function(n) {
                  if (n == 0) trm_return(FALSE) else yield(even(n - 1))
-               }))
+               })
   )
 
 })
