@@ -452,11 +452,11 @@ odd <- function(n) {
 
 ## doesn't work
 trampoline(even(10000))
-#> Error in odd(n - 1): could not find function "odd"
+#> Error in yield(even(n - 1)): could not find function "yield"
 
 ## does work
 trampoline(even(10000), odd = odd)
-#> Error in rlang::eval_bare(rlang::quo_get_expr(dots[[i]])): object 'odd' not found
+#> [1] TRUE
 ```
 
 An example where `trampoline` can really shine is in branching recursive
