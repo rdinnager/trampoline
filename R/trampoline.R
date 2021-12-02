@@ -107,7 +107,7 @@ trampoline <- function(call, ...) {
 
   for(i in seq_along(dots)) {
 
-    func <- rlang::eval_bare(rlang::quo_get_expr(dots[[i]]))
+    func <- eval(rlang::quo_get_expr(dots[[i]]), envir = rlang::caller_env())
     if(!rlang::is_function(func)) {
      stop("the value of a named argument to trampoline must be a function or generator")
     }
@@ -166,7 +166,7 @@ trampoline <- function(call, ...) {
     stop("call must be a call to a function or generator")
   }
 
-  main_call <- rlang::eval_bare(rlang::quo_get_expr(call))
+  main_call <- eval(rlang::quo_get_expr(call))
 
   ## trampoline starts here:--------------------------------------
 
