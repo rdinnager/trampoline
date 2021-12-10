@@ -7,8 +7,10 @@
 
 [![R-CMD-check](https://github.com/rdinnager/trampoline/workflows/R-CMD-check/badge.svg)](https://github.com/rdinnager/trampoline/actions)
 
+[![CRAN
+status](https://www.r-pkg.org/badges/version/trampoline)](https://CRAN.R-project.org/package=trampoline)
 [![Lifecycle:
-experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+stable](https://img.shields.io/badge/lifecycle-stable-brightgreen.svg)](https://lifecycle.r-lib.org/articles/stages.html#stable)
 <!-- badges: end -->
 
 The goal of `trampoline` is to help make deeply recursive functions that
@@ -16,7 +18,13 @@ avoid overflowing the call stack.
 
 ## Installation
 
-You can install the development version from
+`trampoline` can be installed from CRAN with:
+
+``` r
+install.packages("trampoline")
+```
+
+You can also install the development version from
 [GitHub](https://github.com/) with:
 
 ``` r
@@ -96,7 +104,6 @@ tramampoline(
   }
 )
 #> [1] TRUE
-
 trambopoline(
   factorial(12),
   factorial = function(n) {
@@ -336,7 +343,6 @@ Just to show that these all return the same result, we can run them with
 smaller `n` where the regular recursive version will work.
 
 ``` r
-
 factorial(10)
 #> [1] 3628800
 trampoline(factorial1(10))
@@ -360,7 +366,6 @@ bench_res <- bench::mark(trampoline(factorial1(1000)),
                          trampoline(factorial2(10000)),
                          check = FALSE, iterations = 3)
 #> Warning: Some expressions had a GC in every iteration; so filtering is disabled.
-
 plot(as.numeric(bench_res$mem_alloc)[c(TRUE, FALSE)] ~ c(1000, 2000, 5000, 10000), type = "l", col = "red", 
      xlab = "n", ylab = "Bytes Allocated")
 points(as.numeric(bench_res$mem_alloc)[c(FALSE, TRUE)] ~ c(1000, 2000, 5000, 10000), type = "l", col = "blue")
@@ -428,7 +433,6 @@ trampoline(even(10000))
 #> [1] TRUE
 trampoline(even(10001))
 #> [1] FALSE
-
 trampoline(odd(10000))
 #> [1] FALSE
 trampoline(odd(10001))
@@ -453,7 +457,6 @@ odd <- function(n) {
 ## doesn't work
 trampoline(even(10000))
 #> Error in yield(even(n - 1)): could not find function "yield"
-
 ## does work
 trampoline(even(10000), odd = odd)
 #> [1] TRUE
