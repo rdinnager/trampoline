@@ -149,19 +149,25 @@ bench_res <- bench::mark(trampoline(factorial1(1000)),
                          trampoline(factorial2(10000)),
                          check = FALSE, iterations = 3)
 
-plot(as.numeric(bench_res$mem_alloc)[c(TRUE, FALSE)] ~ c(1000, 2000, 5000, 10000), type = "l", col = "red", 
-     xlab = "n", ylab = "Bytes Allocated")
-points(as.numeric(bench_res$mem_alloc)[c(FALSE, TRUE)] ~ c(1000, 2000, 5000, 10000), type = "l", col = "blue")
-legend("right", legend = c("No Tail Call", "Tail Call"), col = c("red", "blue"), lty = 1)
+bench_res
+
+if(all(!is.na(as.numeric(bench_res$mem_alloc)))) {
+  plot(as.numeric(bench_res$mem_alloc)[c(TRUE, FALSE)] ~ c(1000, 2000, 5000, 10000), type = "l", col = "red", 
+       xlab = "n", ylab = "Bytes Allocated")
+  points(as.numeric(bench_res$mem_alloc)[c(FALSE, TRUE)] ~ c(1000, 2000, 5000, 10000), type = "l", col = "blue")
+  legend("right", legend = c("No Tail Call", "Tail Call"), col = c("red", "blue"), lty = 1)
+}
 ```
 
 We can also see that the tail call version is slightly faster:
 
 ```{r benchmark2}
-plot(as.numeric(bench_res$total_time)[c(TRUE, FALSE)] ~ c(1000, 2000, 5000, 10000), type = "l", col = "red", 
-     xlab = "n", ylab = "Total Time")
-points(as.numeric(bench_res$total_time)[c(FALSE, TRUE)] ~ c(1000, 2000, 5000, 10000), type = "l", col = "blue")
-legend("right", legend = c("No Tail Call", "Tail Call"), col = c("red", "blue"), lty = 1)
+if(all(!is.na(as.numeric(bench_res$total_time)))) {
+  plot(as.numeric(bench_res$total_time)[c(TRUE, FALSE)] ~ c(1000, 2000, 5000, 10000), type = "l", col = "red", 
+       xlab = "n", ylab = "Total Time")
+  points(as.numeric(bench_res$total_time)[c(FALSE, TRUE)] ~ c(1000, 2000, 5000, 10000), type = "l", col = "blue")
+  legend("right", legend = c("No Tail Call", "Tail Call"), col = c("red", "blue"), lty = 1)
+}
 ```
 
 Note that `trampoline` adds overhead that may result in a slower performance. However, the overhead is fairly small. It is noticeable for extremely fast computations like the ones done here, but for more complicated computations, the overhead should represent a small proportion of the total execution time. Another performance related note is that `trampoline()` internally disables R's Just-In-Time (JIT) compilation (sometimes referred to as the 'byte' compiler). By default R will attempt to precompile functions before the first or second time they are called (depending on their 'size'). Since generator functions are created anew in each recursion, and they are called twice overall, this mean each one will be precompiled by R, which adds enormous overhead, especially given we know they will not be called a third time in most cases. So disabling JIT makes `trampoline()` faster. On the other hand it means that any function you write that gets called for the first time inside the `trampoline()` call will not be compiled. In some cases this means you might not be able to take advantage of compilation for a function that could benefit from it. If so, you can get around this issue by calling your function once or twice before running `trampoline()` which will cause R to compile it (assuming you are using default JIT settings, accessible with the `compiler::enableJIT()` function). Alternatively you could explicitly precompile your function yourself using the `compiler::cmpfun()` function.
