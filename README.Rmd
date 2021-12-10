@@ -22,13 +22,20 @@ set.seed(12345)
 
 
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![CRAN status](https://www.r-pkg.org/badges/version/trampoline)](https://CRAN.R-project.org/package=trampoline)
 <!-- badges: end -->
 
 The goal of `trampoline` is to help make deeply recursive functions that avoid overflowing the call stack.
 
 ## Installation
 
-You can install the development version from [GitHub](https://github.com/) with:
+`trampoline` can be installed from CRAN with:
+
+```r
+install.packages("trampoline")
+```
+
+You can also install the development version from [GitHub](https://github.com/) with:
 
 ``` r
 # install.packages("devtools")
