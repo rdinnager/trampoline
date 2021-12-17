@@ -20,6 +20,63 @@ library(imager)
 library(purrr)
 ```
 
+This example will show how to write a recursive tree traversal function and then convert it to use `trampoline`. We are going to write a function to collapse the tips of a phylogenetic tree together into a single tip if they are below some minimum distance threshold. This is something I need to do often in my day job as an evolutionary biologists, but I have never found an R tool to do it yet (let me know if you know of one). The general structure of a recursive tree traversing function is to first test for a stopping criterion -- in the case of a function traversing a tree from the root to tips, this will generally be a test of whether we are at the tips yet. The we do something based on this information. At the stopping point we are usually collecting some information and 'passing it back' to the calling function. If not stopping yet, we are usually doing some manipulation, calling our recursive function again two or more times, then aggregating the results and 'passing it back' to the previous call. 
+
+```{r tree_collapse}
+ttree <- rtree(100)
+plot(ttree)
+
+make_singleton <- function(name, edge_len, root_len = 0) {
+  new_tree <- rtree(1)
+  new_tree$edge.length <- mean(edge_len)
+  new_tree$root.edge <- root_len
+  new_tree$tip.label <- name
+  new_tree
+}
+
+collapse_tips <- function(tree, collapse_dist = 0.5) {
+  ## are we at terminal subtrees?
+  root_node <- Ntip(tree) + 1
+  children <- tree$edge[tree$edge[ , 1] == root_node, 2]
+  if(all(children <= 2)) {
+    if(sum(tree$edge.length) < collapse_dist) {
+      new_tree <- make_singleton(paste(tree$tip.label, collapse = "+"), mean(tree$edge.length), tree$root.edge)
+    } else {
+      new_tree <- tree
+    }
+    return(new_tree)
+  } else {
+    if(children[1] > Ntip(tree)) {
+      tree_1 <- extract.clade(tree, children[1], root.edge = 1, collapse.singles = FALSE)
+      subtree_1 <- collapse_tips(tree_1, collapse_dist = collapse_dist)
+    } else {
+      subtree_1 <- make_singleton(tree$tip.label[children[1]], tree$edge[tree$edge[ , 2] == children[1]])
+    }
+    if(children[2] > Ntip(tree)) {
+      tree_2 <- extract.clade(tree, children[2], root.edge = 1, collapse.singles = FALSE)
+      subtree_2 <- collapse_tips(tree_2, collapse_dist = collapse_dist)
+    } else {
+      subtree_2 <- make_singleton(tree$tip.label[children[2]], tree$edge[tree$edge[ , 2] == children[2]])
+    }
+    
+    new_tree <- subtree_1 + subtree_2
+    
+    new_tree$root.edge <- tree$root.edge
+    
+    return(new_tree)
+  }
+  
+}
+
+test <- collapse_tips(ttree)
+
+ttree2 <- rtree(100)
+test2 <- collapse_tips(ttree2, collapse_dist = 1)
+
+
+```
+
+
 # Example 2: Quadtree refinement for images
 
 This example is partly based on this [post](https://dahtah.github.io/imager/quadtrees.html), which also uses `imager` to make a quad-tree. Note that R has several functions in different packages for making quad-trees already, so this is just for demonstration purposes. See for example the package [`{quadtree}`](https://cran.r-project.org/web/packages/quadtree/index.html), which makes quad-trees from spatial rasters.
