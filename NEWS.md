@@ -1,5 +1,7 @@
 # trampoline (development version)
 
+* minor bug fix in vignette
+
 # trampoline 0.1.0
 
 * {trampoline} is on CRAN!

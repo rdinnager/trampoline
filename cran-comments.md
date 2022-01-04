@@ -11,4 +11,5 @@
 
 0 errors v | 0 warnings v | 0 notes v
 
-* This is a new release.
+* This is a resubmission that fixes warnings on CRAN R CMD check for linux systems
+* Updated the vignette to ignore memory allocation data from bench::mark() which was returning NAs on CRAN build system and causing build failure.

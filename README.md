@@ -104,6 +104,7 @@ tramampoline(
   }
 )
 #> [1] TRUE
+
 trambopoline(
   factorial(12),
   factorial = function(n) {
@@ -343,6 +344,7 @@ Just to show that these all return the same result, we can run them with
 smaller `n` where the regular recursive version will work.
 
 ``` r
+
 factorial(10)
 #> [1] 3628800
 trampoline(factorial1(10))
@@ -366,6 +368,7 @@ bench_res <- bench::mark(trampoline(factorial1(1000)),
                          trampoline(factorial2(10000)),
                          check = FALSE, iterations = 3)
 #> Warning: Some expressions had a GC in every iteration; so filtering is disabled.
+
 plot(as.numeric(bench_res$mem_alloc)[c(TRUE, FALSE)] ~ c(1000, 2000, 5000, 10000), type = "l", col = "red", 
      xlab = "n", ylab = "Bytes Allocated")
 points(as.numeric(bench_res$mem_alloc)[c(FALSE, TRUE)] ~ c(1000, 2000, 5000, 10000), type = "l", col = "blue")
@@ -433,6 +436,7 @@ trampoline(even(10000))
 #> [1] TRUE
 trampoline(even(10001))
 #> [1] FALSE
+
 trampoline(odd(10000))
 #> [1] FALSE
 trampoline(odd(10001))
@@ -456,7 +460,8 @@ odd <- function(n) {
 
 ## doesn't work
 trampoline(even(10000))
-#> Error in yield(even(n - 1)): could not find function "yield"
+#> Error in odd(n - 1): could not find function "odd"
+
 ## does work
 trampoline(even(10000), odd = odd)
 #> [1] TRUE
