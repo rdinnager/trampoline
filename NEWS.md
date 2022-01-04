@@ -1,4 +1,4 @@
-# trampoline (development version)
+# trampoline 0.1.1
 
 * minor bug fix in vignette
 
