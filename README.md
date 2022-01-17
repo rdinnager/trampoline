@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# trampoline
+# trampoline <a href="https://rdinnager.github.io/trampoline/"><img src="man/figures/logo.png" align="right" height="139" /></a>
 
 <!-- badges: start -->
 
@@ -344,7 +344,6 @@ Just to show that these all return the same result, we can run them with
 smaller `n` where the regular recursive version will work.
 
 ``` r
-
 factorial(10)
 #> [1] 3628800
 trampoline(factorial1(10))
@@ -460,7 +459,7 @@ odd <- function(n) {
 
 ## doesn't work
 trampoline(even(10000))
-#> Error in odd(n - 1): could not find function "odd"
+#> Error in yield(even(n - 1)): could not find function "yield"
 
 ## does work
 trampoline(even(10000), odd = odd)
